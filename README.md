@@ -25,7 +25,7 @@ Each stage can be **activated or deactivated** in the configuration file, depend
 ## ⚙️ **Project Structure**
 
 ```
-VehicleTrackingXcorr/
+DAS-VTX/
 ├── main.py                     # Supervises and executes the full workflow
 ├── config.py                   # General configuration file
 ├── config_train.py              # Configuration for train-based DAS data
@@ -49,7 +49,6 @@ VehicleTrackingXcorr/
 │
 ├── out_test/                    # Example output directory
 ├── test.log                     # Example log file generated during run
-└── __pycache__/                 # Python cache folder
 ```
 
 ---

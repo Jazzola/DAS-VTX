@@ -8,14 +8,12 @@ from random import shuffle
 
 from VSG_class import VirtualShotGather
 from config import PROCESSED_DIR
-from config import xcorr_start_date, xcorr_end_date, xcorr_sections, n_vsg_per_stack
+from config import xcorr_start_date, xcorr_end_date, xcorr_sections, n_vsg_per_stack, randomize_vsg
 from config import freq_lo, freq_hi, wlen_sw, taper, sw_bp_filt, sw_whiten
 from config import xcorr_parameters, include_other_side
 from utils import whiten_signals, calculate_SNR, generate_date_range, get_file_section
 
 
-#il faut r��crire la corr�lation pour avoir des fails safe lorsque NaN
-#notamment lorsqu'on a pas de data � corr�ler � cause de la traj
 
 def xcorr_process(section, start_date, end_date):
     
@@ -54,12 +52,9 @@ def xcorr_process(section, start_date, end_date):
                         os.mkdir(output_path)
     
 
-    stack_files_list = []
-    if n_vsg_per_stack is None:
-        shuffle(detect_list)
 
-    else:
-        detect_list.sort()
+    detect_list.sort()
+    stack_files_list = []
         
     for parameters in xcorr_parameters:
         wlen = parameters.get('wlen', 1)
@@ -71,80 +66,92 @@ def xcorr_process(section, start_date, end_date):
         #Nom associé aux paramètres
         parameters_str = f'st:{start_date}-end:{end_date}_o={overlap};dt={delta_t};w={wlen};twin={time_window_to_xcorr}'
 
-        n_vsg = 0
-        subset = 0
-        stack = []
-        SNR_values = []
-        for detect in detect_list:
+        # chunking a list of detects into sub-lists of fixed length
+        if n_vsg_per_stack is None:
+            detect_lists = [detect_list]
+        else:
+            detect_lists = [
+                detect_list[i : i + n_vsg_per_stack]
+                for i in range(0, len(detect_list), n_vsg_per_stack)
+            ]
+
+        n_subset = 0
+        for detect_sublist in detect_lists:
+            
+            if randomize_vsg:#n_vsg_per_stack is None:
+                shuffle(detect_sublist)
+            
+            stack = []
+            vsg_times = []
+            SNR_values = []
+            n_vsg = 0
+            for detect in detect_sublist:
                     
-            sw = np.load(detect, allow_pickle=True).item()
-
-
-            for i in range(sw.data.shape[0]):
-                #Taper for filter
-                sw.data[i, :] = sw.data[i, :]*tukey(sw.data.shape[1],
-                                                    taper/wlen_sw)
+                sw = np.load(detect, allow_pickle=True).item()
+    
+    
+                for i in range(sw.data.shape[0]):
+                    #Taper for filter
+                    sw.data[i, :] = sw.data[i, :]*tukey(sw.data.shape[1],
+                                                        taper/wlen_sw)
+                    
+                dt = sw.t_axis[1]-sw.t_axis[0]
+                if sw_bp_filt:
+                    sos = butter(5, [freq_lo, freq_hi], btype='bandpass', output='sos', fs=1/dt)
+                    data_filt = sosfiltfilt(sos, sw.data)
                 
-            dt = sw.t_axis[1]-sw.t_axis[0]
-            if sw_bp_filt:
-                sos = butter(5, [freq_lo, freq_hi], btype='bandpass', output='sos', fs=1/dt)
-                data_filt = sosfiltfilt(sos, sw.data)
-            
-            if sw_whiten:
-                data_filt = whiten_signals(data_filt, freq_lo, freq_hi, fs=1/dt)
-            else:
-                data_filt = sw.data
-            
-            sw_filt = copy.deepcopy(sw)
-            sw_filt.data = data_filt
+                if sw_whiten:
+                    data_filt = whiten_signals(data_filt, freq_lo, freq_hi, fs=1/dt)
+                else:
+                    data_filt = sw.data
+                
+                sw_filt = copy.deepcopy(sw)
+                sw_filt.data = data_filt
+    
+                try:
+                    vsg=VirtualShotGather(sw_filt, start_x=start_ch,
+                                            end_x=end_ch, pivot=pivot_ch,
+                                            wlen=wlen, overlap=overlap, delta_t=delta_t,
+                                            time_window_to_xcorr=time_window_to_xcorr,
+                                            norm=norm, norm_amp=norm_amp,
+                                            include_other_side=include_other_side,
+                                            new_xcorr=True) #le rajouter dans config ?
+                except ValueError:
+                    print('SW skipped, VSG calculation error') #ajouter des détails?
+                    continue
+    
+                if np.isnan(vsg.XCF_out).any():
+                    print('SW skipped, NaNs in VSG, SW window boundary issue ??') #ajouter des détails?
+                    continue
+                
+                #Est ce qu'on enregistre les individuals ???????????
+                # si on ne le fait pas ce n'est pas la peine de créer le repertoire
+                
+                if not stack:
+                    stack.append(vsg)
+                else:
+                    stack[0]+=vsg
+    
+                SNR = calculate_SNR(stack[0])
+                SNR_values.append(SNR)
 
-            try:
-                vsg=VirtualShotGather(sw_filt, start_x=start_ch,
-                                        end_x=end_ch, pivot=pivot_ch,
-                                        wlen=wlen, overlap=overlap, delta_t=delta_t,
-                                        time_window_to_xcorr=time_window_to_xcorr,
-                                        norm=norm, norm_amp=norm_amp,
-                                        include_other_side=include_other_side,
-                                        new_xcorr=True) #le rajouter dans config ?
-            except ValueError:
-                print('SW skipped, VSG calculation error') #ajouter des détails?
-                continue
-
-            if np.isnan(vsg.XCF_out).any():
-                print('SW skipped, NaNs in VSG, SW window boundary issue ??') #ajouter des détails?
-                continue
-            
-            #Est ce qu'on enregistre les individuals ???????????
-            # si on ne le fait pas ce n'est pas la peine de créer le repertoire
-            
-            if not stack:
-                stack.append(vsg)
-            else:
-                stack[0]+=vsg
-
-            SNR = calculate_SNR(stack[0])
-            SNR_values.append(SNR)
-
-
-            n_vsg += 1
-            if n_vsg == n_vsg_per_stack: #fixed size stacks for studying time variations
-                stack = stack[0]
-                subset += 1
-                if not os.path.exists(PROCESSED_DIR / 'VSGs' / 'STACKs'):
-                    os.mkdir(PROCESSED_DIR / 'VSGs' / 'STACKs')
-                out_name = f'Stack_n={n_vsg}_Subset={subset}_' + parameters_str
-                np.savez(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name, parameters=parameters, SNR=SNR_values, stack=stack, allow_pickle=True)
-                stack_files_list.append(str(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name)+'.npz')
-                n_vsg = 0
-                stack = []
-                SNR_values = []
-        
-        if n_vsg_per_stack is None: #full stack for studying parameters
-            stack = stack[0]
+                detect_time = get_date_from_file_path(Path(detect).parent, DAS_FILE_FORMAT.split('.h5')[0])
+                detect_time += timedelta(seconds=int(detect.split('t_')[-1][:-4]))
+                detect_time = detect_time.strftime(DATE_TIME_FORMAT)
+                vsg_times.append(detect_time)
+                
+                n_vsg += 1
+                
+            # Proceed to next list of detects
+            stack = stack[0]                    
             if not os.path.exists(PROCESSED_DIR / 'VSGs' / 'STACKs'):
                 os.mkdir(PROCESSED_DIR / 'VSGs' / 'STACKs')
-            out_name = f'Stack_n={n_vsg}_' + parameters_str
-            np.savez(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name, parameters=parameters, SNR=SNR_values, stack=stack, allow_pickle=True)
+            n_subset = str(n_subset).zfill(3)
+            n_vsg = str(n_vsg).zfill(4)
+            out_name = f'Stack_n={n_vsg}_Subset={n_subset}_' + parameters_str
+            np.savez(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name, parameters=parameters, SNR=SNR_values, vsg_times=vsg_times, stack=stack, allow_pickle=True)
             stack_files_list.append(str(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name)+'.npz')
+            n_subset += 1
+
 
     return stack_files_list

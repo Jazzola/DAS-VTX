@@ -3,10 +3,10 @@ from multiprocessing import Pool
 import os
 import shutil
 
-config_to_use = 'voiture'
+config_to_use = 'train'
 if config_to_use == 'voiture' or config_to_use == 'train':
     shutil.copy(os.getcwd()+'/config_'+config_to_use+'.py', os.getcwd()+'/config.py')
-    
+
 from data_loader import DataLoader
 from tracking_process import tracking_process
 from xcorr_process import xcorr_process
@@ -17,9 +17,9 @@ from config import tracking_start_date, tracking_end_date, tracking_sections, st
 from config import xcorr_start_date, xcorr_end_date, xcorr_sections
 from config import stack_files_list
 from utils import multiprocess_iterable_on_dates, multiprocess_iterable_on_sections
+from datetime import datetime
 
 import logging
-logger = logging.getLogger('todefine')
 
 
 def run_tracking_analysis(args):
@@ -34,8 +34,16 @@ def run_xcorr_analysis(args):
 
 
 def main():
-    logging.basicConfig(filename='test.log', level=logging.INFO)
-    logger.info('Started')
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logfile = f"{timestamp}.log"
+    logging.basicConfig(
+        filename=logfile,
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("Started")
 
 
     if RUN_TRACKING:

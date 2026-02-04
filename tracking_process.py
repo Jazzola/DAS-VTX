@@ -71,4 +71,6 @@ def tracking_process(DataLoader, section):
             #print('No detections for the hour')
             logger.info('No detections for the hour')
 
-    del data, distance, t_axis, data_attributes, file_path, decimated_files, tracker, detect_list
+        del data, distance, t_axis, data_attributes, file_path, decimated_files, tracker, detect_list
+
+    

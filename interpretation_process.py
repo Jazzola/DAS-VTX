@@ -34,6 +34,7 @@ def interpretation_process(stack_file):
     parameters = content['parameters'].item()
     stack_full = content['stack'].item()
     SNR_values = content['SNR']
+    vsg_times = content['vsg_times']
 
 
     fig, ax = plt.subplots()
@@ -91,7 +92,7 @@ def interpretation_process(stack_file):
         results = enhancer.calculate_enhanced_stack()
         sem = 2*np.array(sum(results))/len(slw_list)
 
-        if stack_full.t_axis.shape[0]%decim==0:
+        if stack_full.t_axis.shape[0] % decim==0:
             shift = stack_full.t_axis[::decim]
         else:
             shift = stack_full.t_axis[:-decim:decim]
@@ -100,33 +101,41 @@ def interpretation_process(stack_file):
         xx, yy = np.meshgrid(stack_full.x_axis, stack_full.t_axis, indexing='ij')
         sem = sem_interp((xx, yy))
 
-        stack_full.XCF_out *= sem**2   #Est ce qu'on donne le choix de ne pas prendre le carré ? dans ce cas on define coherence_enhancing = 0,1,2
+        stack_full.XCF_out *= sem**2   #Est ce qu'on donne le choix de ne pas prendre le carr� ? dans ce cas on define coherence_enhancing = 0,1,2
 
-    stack_full.compute_disp_image(freqs=freqs, vels=vels)
+    stack_full.compute_disp_image(freqs=freqs, vels=vels, mod=True, apodis=True) #ON EST ICI POUR LE TEST
     disp_full = stack_full.disp.fv_map
     
+    disp_figs_dir = PROCESSED_DIR / 'FIG' / 'Disp' / stack_name / f'norm={stack_norm}_coher-enhancing={coherence_enhancing}_offsets={offsets_to_keep}_lags={lags_to_keep}'
+    if not os.path.exists(disp_figs_dir):
+        os.mkdir(disp_figs_dir)
     
-    fig, ax = plt.subplots(1, 2, figsize=(6.4*2, 6.4))
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 6.4))
     pclip = np.percentile(np.abs(stack_full.XCF_out), 99)
-    ax[0].pcolormesh(stack_full.t_axis, stack_full.x_axis, stack_full.XCF_out,
+    ax.pcolormesh(stack_full.t_axis, stack_full.x_axis, stack_full.XCF_out,
                     cmap='seismic', vmax=pclip, vmin=-pclip)
 
-    ax[0].set_xlabel('Timelag [s]', fontsize='x-large')
-    ax[0].set_ylabel('Inter-station distance [m]', fontsize='x-large')
+    ax.set_xlabel('Timelag [s]', fontsize='x-large')
+    ax.set_ylabel('Inter-station distance [m]', fontsize='x-large')
+    plt.tight_layout()
+    plt.savefig(disp_figs_dir / f'Processed_stack_used', dpi=300)
+    plt.close()
+    
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 6.4))
     pclip = 99.
     vmax = np.percentile(np.abs(disp_full[(stack_full.disp.vels>=250) & (stack_full.disp.vels>=2000)]), pclip)*5 #[~np.isnan(disp)]
     vmin = np.percentile(np.abs(disp_full[(stack_full.disp.vels>=250) & (stack_full.disp.vels>=2000)]), 50)#100-pclip)
-    ax[1].pcolormesh(stack_full.disp.freqs,
+    ax.pcolormesh(stack_full.disp.freqs,
                 stack_full.disp.vels,
                 disp_full,
                 cmap="jet",
                 vmax=vmax,
                 vmin=vmin)
-    ax[1].set(xscale='log', xlim=(0.7, 20), yscale='log', ylim=(250, 2000))
-    ax[1].set_xlabel('Frequency [Hz]', fontsize='x-large')
-    ax[1].set_ylabel('Phase Velocity [m/s]', fontsize='x-large')
+    ax.set(xscale='log', xlim=(0.7, 20), yscale='log', ylim=(250, 2000))
+    ax.set_xlabel('Frequency [Hz]', fontsize='x-large')
+    ax.set_ylabel('Phase Velocity [m/s]', fontsize='x-large')
     plt.tight_layout()
-    plt.savefig(PROCESSED_DIR / 'FIG' / 'Disp' / stack_name / f'Disp_without_masking.png', dpi=300)
+    plt.savefig(disp_figs_dir / f'Disp_without_masking.png', dpi=300)
     plt.close()
     
 
@@ -159,7 +168,7 @@ def interpretation_process(stack_file):
             ax[0].set_xlabel('Timelag [s]', fontsize='x-large')
             ax[0].set_ylabel('Inter-station distance [m]', fontsize='x-large')
             pclip = 99.
-            vmax = np.percentile(np.abs(masking_disp[(stack_cut.disp.vels>=250) & (stack_cut.disp.vels>=2000)]), pclip)*3 #[~np.isnan(disp)]
+            vmax = np.percentile(np.abs(masking_disp[(stack_cut.disp.vels>=250) & (stack_cut.disp.vels>=2000)]), pclip)*5 #[~np.isnan(disp)]
             vmin = np.percentile(np.abs(masking_disp[(stack_cut.disp.vels>=250) & (stack_cut.disp.vels>=2000)]), 50)#100-pclip)
             ax[1].pcolormesh(stack_cut.disp.freqs,
                         stack_cut.disp.vels,
@@ -171,49 +180,44 @@ def interpretation_process(stack_file):
             ax[1].set_xlabel('Frequency [Hz]', fontsize='x-large')
             ax[1].set_ylabel('Phase Velocity [m/s]', fontsize='x-large')
             plt.tight_layout()
-            plt.savefig(PROCESSED_DIR / 'FIG' / 'Disp' / stack_name / f'Masking_disp_{k}_cut-dist={round(cut_dist, 1)}.png', dpi=300)
+            plt.savefig(disp_figs_dir / f'Masking_disp_{k}_cut-dist={round(cut_dist, 1)}.png', dpi=300)
             plt.close()
     
     
         final_mask /= np.max(final_mask)
     
-    
+        
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 6.4))
         pclip = 99.
         vmax = np.percentile(np.abs(final_mask), pclip)*1 #[~np.isnan(disp)]
         vmin = np.percentile(np.abs(final_mask), 50)#100-pclip)
-        plt.pcolormesh(freqs, vels, final_mask, cmap="jet", vmax=vmax, vmin=vmin)
-        plt.xscale('log')
-        plt.xlim((0.7, 20))
-        plt.yscale('log')
-        plt.ylim((150, 2000))
-        plt.savefig(PROCESSED_DIR / 'FIG' / 'Disp' / stack_name / f'Final_mask.png', dpi=300)
+        ax.pcolormesh(freqs, vels, final_mask, cmap="jet", vmax=vmax, vmin=vmin)
+        ax.set(xscale='log', xlim=(0.7, 20), yscale='log', ylim=(250, 2000))
+        ax.set_xlabel('Frequency [Hz]', fontsize='x-large')
+        ax.set_ylabel('Phase Velocity [m/s]', fontsize='x-large')
+        plt.savefig(disp_figs_dir / f'Final_mask.png', dpi=300)
         plt.close()
 
 
-        disp_full *= final_mask
+        disp_masked = deepcopy(disp_full)
+        disp_masked *= final_mask
     
     
-        fig, ax = plt.subplots(1, 2, figsize=(6.4*2, 6.4))
-        pclip = np.percentile(np.abs(stack_full.XCF_out), 99)
-        ax[0].pcolormesh(stack_full.t_axis, stack_full.x_axis, stack_full.XCF_out,
-                        cmap='seismic', vmax=pclip, vmin=-pclip)
-    
-        ax[0].set_xlabel('Timelag [s]', fontsize='x-large')
-        ax[0].set_ylabel('Inter-station distance [m]', fontsize='x-large')
-        pclip = 95
-        vmax = np.percentile(np.abs(disp_full[(stack_full.disp.vels>=250) & (stack_full.disp.vels>=2000)]), pclip)#*5 #[~np.isnan(disp)]
+        fig, ax = plt.subplots(1, 1, figsize=(6.4, 6.4))
+        pclip = 99
+        vmax = np.percentile(np.abs(disp_full[(stack_full.disp.vels>=250) & (stack_full.disp.vels>=2000)]), pclip)*5 #[~np.isnan(disp)]
         vmin = np.percentile(np.abs(disp_full[(stack_full.disp.vels>=250) & (stack_full.disp.vels>=2000)]), 50)#100-pclip)
-        ax[1].pcolormesh(stack_full.disp.freqs,
+        ax.pcolormesh(stack_full.disp.freqs,
                     stack_full.disp.vels,
-                    disp_full,
+                    disp_masked,
                     cmap="jet",
                     vmax=vmax,
                     vmin=vmin)
-        ax[1].set(xscale='log', xlim=(0.7, 20), yscale='log', ylim=(250, 2000))
-        ax[1].set_xlabel('Frequency [Hz]', fontsize='x-large')
-        ax[1].set_ylabel('Phase Velocity [m/s]', fontsize='x-large')
+        ax.set(xscale='log', xlim=(0.7, 20), yscale='log', ylim=(250, 2000))
+        ax.set_xlabel('Frequency [Hz]', fontsize='x-large')
+        ax.set_ylabel('Phase Velocity [m/s]', fontsize='x-large')
         plt.tight_layout()
-        plt.savefig(PROCESSED_DIR / 'FIG' / 'Disp' / stack_name / f'Masked_disp.png', dpi=300)
+        plt.savefig(disp_figs_dir / f'Masked_disp.png', dpi=300)
         plt.close()
 
 
@@ -222,6 +226,6 @@ def interpretation_process(stack_file):
     savedir = PROCESSED_DIR / 'DISPs'
     disp_name = 'Disp_' + stack_name
     if disp_masking:
-        np.savez(savedir / disp_name, parameters=parameters, disp=disp_full, vels=vels, freqs=freqs, mask=final_mask, allow_pickle=True)
+        np.savez(savedir / disp_name, parameters=parameters, disp=disp_full, vels=vels, freqs=freqs, mask=final_mask, masked_disp=disp_masked, vsg_times=vsg_times, allow_pickle=True)
     else:
-        np.savez(savedir / disp_name, parameters=parameters, disp=disp_full, vels=vels, freqs=freqs, allow_pickle=True)
+        np.savez(savedir / disp_name, parameters=parameters, disp=disp_full, vels=vels, freqs=freqs, vsg_times=vsg_times, allow_pickle=True)

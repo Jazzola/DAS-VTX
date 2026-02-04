@@ -121,8 +121,9 @@ def post_processing_XCF_NEW(window, pivot_idx, start_x_idx, end_x_idx, XCF_out, 
         
         
     if not reverse:
+        XCF_out = XCF_out[::-1, :]
         XCF_out = XCF_out[:, ::-1]
-        x_axis = window.x_axis[start_x_idx: pivot_idx] - window.x_axis[pivot_idx+1]
+        x_axis = window.x_axis[start_x_idx: pivot_idx] - window.x_axis[pivot_idx]
         
     else:
         x_axis = window.x_axis[pivot_idx: end_x_idx] - window.x_axis[pivot_idx-1]

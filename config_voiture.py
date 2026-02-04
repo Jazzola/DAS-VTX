@@ -7,7 +7,6 @@ import numpy as np
 # Control which parts of the DAS-VTX workflow are executed.
 # For road vehicles, tracking may be optional if focusing
 # on correlation-based analysis only.
-
 RUN_TRACKING = False         # Vehicle detection and tracking
 RUN_XCORR = True             # Cross-correlation and VSG retrieval
 RUN_INTERPRETATION = True    # Dispersion analysis and interpretation
@@ -21,7 +20,6 @@ n_processes = 15              # Number of parallel processes (CPU cores)
 # Definition of the fiber section used for vehicle detection
 # and tracking. Each tuple defines (start, pivot, end) offsets
 # along the cable in meters.
-
 tracking_sections = [(1750, 2100, 2450)]
 
 # Time span over which vehicle passages are processed
@@ -64,11 +62,11 @@ dx = 9.6   # Inter-channel spacing [m]
 # ============================================================
 #                       PATHS AND I/O
 # ============================================================
-# Input DAS data and output directories
-datapath = '/lsdf/kit/agw/projects/INSIDE_DAS/2023_CN_DAS/' #str: path to the input DAS data files
-decimateddatapath = '/lsdf/kit/agw/projects/INSIDE_DAS/2023_CN_DAS/DECIMATE/'#str: path to the files created from the raw DAS datasets after decimation
+# Input DAS data directories
+datapath = '//' #str: path to the input DAS data files
 # Output directory path
-PROCESSED_DIR = Path('/pfs/data6/home/ka/ka_agw/ka_wb2462/DAS_VTX/out_test') #str: path where are stored the outputs of the script
+decimateddatapath = '//DECIMATE/'#str: path to the files created from the raw DAS datasets after decimation
+PROCESSED_DIR = Path('//RESULTS/outputs') #str: path where are stored the outputs of the script
 
 
 # ============================================================

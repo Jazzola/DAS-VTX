@@ -7,7 +7,6 @@ import numpy as np
 # Control which parts of the DAS-VTX workflow are executed.
 # This allows running detection, correlation, or interpretation
 # independently without recomputing intermediate products.
-
 RUN_TRACKING = True          # Detect and track moving sources (trains)
 RUN_XCORR = False            # Compute Virtual Shot Gathers (VSGs)
 RUN_INTERPRETATION = False   # Dispersion analysis and interpretation
@@ -63,11 +62,11 @@ dx = 9.6  # Inter-channel spacing [m], used to convert channel index to offset
 # ============================================================
 #                       PATHS AND I/O
 # ============================================================
-# Input DAS data and output directories
-datapath = '/lsdf/kit/agw/projects/INSIDE_DAS/2024_TELEMAXX_DAS/' #str: path to the input DAS data files
-decimateddatapath = ('/lsdf/kit/agw/projects/INSIDE_DAS/2024_TELEMAXX_DAS/DECIMATE') #str: path to the files created from the raw DAS datasets after decimation
+# Input DAS data directories
+datapath = '//' #str: path to the input DAS data files
 # Output directory path
-PROCESSED_DIR = (Path('/lsdf/kit/agw/projects/INSIDE_DAS/RESULTS_CS2N') / 'outputs') #str: path where are stored the outputs of the script
+decimateddatapath = ('//DECIMATE') #str: path to the files created from the raw DAS datasets after decimation
+PROCESSED_DIR = Path('//RESULTS/outputs') #str: path where are stored the outputs of the script
  
 
 # ============================================================
@@ -196,5 +195,3 @@ disp_masking = True
 max_cut_dist = 500                 # Initial max offset [m]
 min_cut_dist = 150                 # Minimum retained offset [m]
 step_factor = 4                    # Step size in multiples of dx
-
-

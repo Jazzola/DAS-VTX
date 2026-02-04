@@ -27,7 +27,7 @@ def fk(data, dx, dt):
 def fk_new(data, dx, dt, apodis=False):
     
     if apodis:
-        data *= window(("tukey", 0.4), data.shape)
+        data *= window(("hann"), data.shape) #window(("tukey", 0.4), data.shape)
     fk_raw= np.fft.fft2(data)
     fft_k = np.fft.fftfreq(fk_raw.shape[0], dx)
     fft_f = np.fft.fftfreq(fk_raw.shape[1], dt)

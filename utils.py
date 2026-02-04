@@ -12,7 +12,7 @@ from obspy import Stream, Trace
 from obspy.core import UTCDateTime
 from skimage.filters import window as taper_win
 
-from config import DATE_FORMAT, DAS_FILE_FORMAT
+from config import DATE_TIME_FORMAT, DAS_FILE_FORMAT, DATE_FORMAT
 from func_data_imports import data_matrix_import
 
 
@@ -235,14 +235,22 @@ def calculate_SNR(VSG):
     yy, xx = np.meshgrid(VSG.t_axis, VSG.x_axis)
     
     # Prevent division by zero by replacing zero values in yy
-    yy_safe = np.where(yy == 0, 1e-6, yy)  # Small value instead of zero
+    yy_safe = np.where(yy == 0, 1e-10, yy)  # Small value instead of zero
     ratio = np.abs(xx/yy_safe)
     
-    signal = VSG.XCF_out[(ratio <= 1200)&(ratio >= 250)&(yy>0)&(yy<=1)].copy()
-    signal = np.sqrt(np.mean(np.square(signal)))
-    noise = VSG.XCF_out[((ratio > 1200)|(ratio < 250))&(yy>0)&(yy<=1)].copy()
-
-    noise = np.sqrt(np.mean(np.square(noise)))
+    # noise_mask = (  ((ratio > 1200) | (ratio < 250)) &
+    #     (xx > 0.1) &
+    #     (yy > 0.1) &
+    #     (yy <= 1))
+    
+    noise_mask = ((ratio > 1200) &
+        (xx > 0.1) & (yy > 0.1) & (yy <= 1))
+    
+    signal_mask = ((ratio >= 250) & (ratio <= 1200) &
+        (xx > 0.1) & (yy > 0.1) & (yy <= 1.0))
+    
+    signal = np.sqrt(np.mean(VSG.XCF_out[signal_mask] ** 2))
+    noise  = np.sqrt(np.mean(VSG.XCF_out[noise_mask] ** 2))
     
     # Avoid division errors
     if noise == 0:
@@ -250,6 +258,7 @@ def calculate_SNR(VSG):
     
     # Compute SNR in dB
     SNR = 20*np.log10(signal / noise)
+    
     return SNR
 
 
@@ -339,7 +348,8 @@ def get_file_section(file_path): #FONCTIONNE POUR NOTRE FORMAT SPECIFIQUE, il fa
 ### DATA UTILS
 #
 
-def create_npz_data(filepath, destination_path, decimation_factor=10, return_full=False):
+#DATE format et nombre de minutes du chunk à mettre en variables
+def create_npz_data(filepath, destination_path, decimation_factor=10, chunk_size=600, return_full=False):
     data, distance, t_axis, data_attributes = data_matrix_import(filepath)
     
     dt=t_axis[1]-t_axis[0]
@@ -352,15 +362,15 @@ def create_npz_data(filepath, destination_path, decimation_factor=10, return_ful
     data_decimated, _ = from_stream2npArray(st_data)
     del st_data
     
-    npts = int(600/(dt*decimation_factor))
-    for k in range(t_axis_decimated.shape[0]//npts):
-        data_portion = data_decimated[:, k*npts:(k+1)*npts]
+    chunk_npts = int(chunk_size/(dt*decimation_factor))
+    for k in range(t_axis_decimated.shape[0]//chunk_npts):
+        data_portion = data_decimated[:, k*chunk_npts:(k+1)*chunk_npts]
 
         start = get_date_from_file_path(filepath, DAS_FILE_FORMAT)
-        start += datetime.timedelta(minutes=k*600//60)
-        destination = destination_path / start.strftime('%Y%m%d_%H%M%S')
+        start += timedelta(minutes=k*chunk_size//60)
+        destination = destination_path / start.strftime(DATE_TIME_FORMAT)
         
-        np.savez(destination, data=data_portion, x_axis=distance, t_axis=t_axis_decimated[k*npts:(k+1)*npts])
+        np.savez(destination, data=data_portion, x_axis=distance, t_axis=t_axis_decimated[k*chunk_npts:(k+1)*chunk_npts])
     
     if return_full:
         return data, distance, t_axis

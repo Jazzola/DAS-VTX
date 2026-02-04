@@ -112,7 +112,7 @@ tqdm
 
 # DAS Processing Parameters
 
-## A. Workflow control and execution
+## Workflow control and execution
 
 | Parameter           | Example 1 - Cars   | Example 2 - Trains          | Description                                                                 |
 |--------------------|--------|----------------|-----------------------------------------------------------------------------|
@@ -121,7 +121,7 @@ tqdm
 | RUN_INTERPRETATION  | True or False   | True or False | Enables dispersion analysis and post-processing of stacked VSGs             |
 | n_processes         | 10      | 10             | int, number of parallel CPU processes used for computation                        |
 
-## B. Tracking geometry and temporal selection
+## Tracking geometry and temporal selection
 
 |            |    |           |                                                                  |
 |---------------------------------|----------------------|------------------------|-----------------------------------------------------------------------------|
@@ -132,13 +132,13 @@ tqdm
 | end_hour                        | 22                   | 22                     | End hour (UTC)                                                              |
 | tracking_data_decimation_factor | 5                   | 5                      | Temporal decimation before tracking; higher values reduce data volume for slower road traffic |
 
-## C. DAS acquisition and geometry
+## DAS acquisition and geometry
 
 |            |    |           |                                                                  |
 |-----------|-------|--------|-----------------------------------|
 | dx        | 9.6 m | 9.6 m  | Inter-channel spacing along the fiber |
 
-## D. Preprocessing prior to tracking
+## Preprocessing prior to tracking
 
 |            |    |           |                                                                  |
 |-----------------------|--------------|-------------|------------------------------------------------------------------|
@@ -152,7 +152,7 @@ tqdm
 | av_win                | 5            | 5           | Spatial averaging window (channels)                                |
 | oversampling_factor   | 5            | 5           | Temporal oversampling to improve detection and alignment           |
 
-## E. Detection and Kalman-filter tracking
+## Detection and Kalman-filter tracking
 
 |            |    |           |                                                                  |
 |-----------------|------|--------|---------------------------------------------------------------|
@@ -164,7 +164,7 @@ tqdm
 | nx_init          | 3    | 3      | Number of detections required to initialize a track           |
 | reverse_amp      | True | True   | Detects vehicles as amplitude minima or maxima                |
 
-## F. Trajectory preselection and quality control
+## Trajectory preselection and quality control
 
 |            |    |           |                                                                  |
 |----------------------|----------------|---------------|-------------------------------------------------------------------|
@@ -174,7 +174,7 @@ tqdm
 | curve_break           | (5, 1.8, 0.1, 25) | Same        | Rejects trajectories with strong curvature breaks                 |
 | speed_fluctuations    | (1.5, 0.1)    | (1.5, 0.1)   | Rejects trajectories with excessive speed variability             |
 
-## G. Surface-wave window extraction
+## Surface-wave window extraction
 
 |            |    |           |                                                                  |
 |-----------------|---------|---------|------------------------------------------|
@@ -183,7 +183,7 @@ tqdm
 | taper           | 4 s     | 4 s     | Apodization length                        |
 | temporal_spacing| 76 s    | 196 s   | Minimum spacing between successive windows |
 
-## H. Cross-correlation and VSG construction
+## Cross-correlation and VSG construction
 
 |            |    |           |                                                                  |
 |----------------------|------|--------|--------------------------------------------------|
@@ -197,7 +197,7 @@ tqdm
 | freq_lo              | 0.5 Hz| 0.5 Hz| Lower frequency bound                             |
 | freq_hi              | 40 Hz| 40 Hz  | Upper frequency bound                             |
 
-## I. Dispersion analysis and post-processing
+## Dispersion analysis and post-processing
 
 |            |    |           |                                                                  |
 |------------------------|-----------------|-----------------|-----------------------------------------------------|
@@ -209,7 +209,7 @@ tqdm
 | offsets_to_keep        | both             | both            | Causal and acausal offsets                          |
 | lags_to_keep           | causal           | causal          | Restriction to causal lags                         |
 
-## J. Dispersion masking (aperture-dependent)
+## Dispersion masking (aperture-dependent)
 
 |            |    |           |                                                                  |
 |----------------|-------|--------|-------------------------------------------------|

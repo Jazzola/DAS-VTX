@@ -123,6 +123,7 @@ tqdm
 
 ## B. Tracking geometry and temporal selection
 
+|            |    |           |                                                                  |
 |---------------------------------|----------------------|------------------------|-----------------------------------------------------------------------------|
 | tracking_sections               | (1750, 2100, 2450) m | (15200, 15550, 15900) m | Fiber section used for detection and tracking (start, pivot, end)           |
 | tracking_start_date             | 2023-04-04           | 2025-04-01             | Start date of tracking period                                               |

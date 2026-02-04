@@ -1,158 +1,201 @@
 from pathlib import Path
 import numpy as np
 
+# ============================================================
+#                    MAIN EXECUTION FLAGS
+# ============================================================
+# Control which parts of the DAS-VTX workflow are executed.
+# For road vehicles, tracking may be optional if focusing
+# on correlation-based analysis only.
 
-#=======================#
-### MAIN PARAMETERS ###
-#=======================#
-RUN_TRACKING= False
-RUN_XCORR= True
-RUN_INTERPRETATION= True
-n_processes = 7
+RUN_TRACKING = False         # Vehicle detection and tracking
+RUN_XCORR = True             # Cross-correlation and VSG retrieval
+RUN_INTERPRETATION = True    # Dispersion analysis and interpretation
+
+n_processes = 15              # Number of parallel processes (CPU cores)
 
 
-#=======================#
-### TRACKING PROCESS ###
-#=======================#
-tracking_sections = [(1750, 2100, 2450)] #(start, pivot, end)
+# ============================================================
+#                TRACKING CONFIGURATION (if RUN_TRACKING)
+# ============================================================
+# Definition of the fiber section used for vehicle detection
+# and tracking. Each tuple defines (start, pivot, end) offsets
+# along the cable in meters.
+
+tracking_sections = [(1750, 2100, 2450)]
+
+# Time span over which vehicle passages are processed
 tracking_start_date = '20230404'
-tracking_end_date = '20230404'
-start_hour = 5 # UTC >= 
-end_hour = 12 # <
-# Defines the time of the day to process, for entire day set start_hour=0 and end_hour=24
+tracking_end_date   = '20230404'
+
+# Restrict processing to time periods with significant traffic
+start_hour = 5     # UTC >=
+end_hour   = 12    # UTC <
+
+# Decimation applied to raw DAS data before tracking.
+# Higher decimation is acceptable for road traffic due to
+# lower apparent velocities and longer signal durations.
+tracking_data_decimation_factor = 10
 
 
-#=======================#
-### XCORR PROCESS ###
-#=======================#
-xcorr_sections = [(1750, 1950, 2150)] #(start, pivot, end)
-xcorr_start_date='20230404'
-xcorr_end_date='20230404'
-# included date limits
+# ============================================================
+#              CROSS-CORRELATION CONFIGURATION
+# ============================================================
+# Fiber section used to compute cross-correlations and retrieve
+# Virtual Shot Gathers (VSGs).
+xcorr_sections = [(1750, 2100, 2450)]
 
-n_vsg_per_stack = None #fixed size stacks for studying time variations
+# Time span over which possible detections are processed
+xcorr_start_date = '20230404'
+xcorr_end_date   = '20230404'
 
-#list of stack files paths 
-#OR string of stack files directory path
-#OR None if followup of xcorr process
-stack_files_list = None #['/home/johannes/THOMAS/0versions_wr/Updated_xcorr_test_ws/workflow_fig/stack_raw_New_500-rand_SNRnew_o_0, dt_0.2, w_2.3, twin_2.6.npz'] #
-
-
-#=================#
-### DATA ###
-#=================#
-dx=9.6
+# VSG stacking options
+randomize_vsg = True         # Randomize VSG selection to avoid bias
+n_vsg_per_stack = None       # None = stack all available VSGs, N [int] = recursive stacking, each stack stoped at N VSG
+stack_files_list = None      # Optional: use precomputed stack files (to run correlation alone)
 
 
-#=================#
-### DIRECTORIES ###
-#=================#
-datapath = '/home/johannes/DATA/LSDF_DAS/2023_CN_DAS'
-decimateddatapath = '/home/johannes/DATA/LSDF_DAS/2023_CN_DAS/DECIMATE'
-#Output directory path
-PROCESSED_DIR = Path('/home/johannes/THOMAS/DAS-VTX_WIP/out_test')
+# ============================================================
+#                   DAS ACQUISITION PARAMETERS
+# ============================================================
+dx = 9.6   # Inter-channel spacing [m]
 
 
+# ============================================================
+#                       PATHS AND I/O
+# ============================================================
+# Input DAS data and output directories
+datapath = '/lsdf/kit/agw/projects/INSIDE_DAS/2023_CN_DAS/' #str: path to the input DAS data files
+decimateddatapath = '/lsdf/kit/agw/projects/INSIDE_DAS/2023_CN_DAS/DECIMATE/'#str: path to the files created from the raw DAS datasets after decimation
+# Output directory path
+PROCESSED_DIR = Path('/pfs/data6/home/ka/ka_agw/ka_wb2462/DAS_VTX/out_test') #str: path where are stored the outputs of the script
 
-#=================#
-### FORMATS ###
-#=================#
+
+# ============================================================
+#                     FILE NAMING FORMATS
+# ============================================================
 DATE_FORMAT = '%Y%m%d'
 DATE_TIME_FORMAT = '%Y%m%d_%H%M%S'
 DAS_FILE_FORMAT = 'SR_DS_%Y-%m-%d_%H-%M-%S_UTC.h5'
 DECIM_FILE_FORMAT = '%Y%m%d_%H%M%S.npz'
 
 
-#=======================#
-### PREPROCESSING ###
-#=======================#
-default_preprocessing_dict = {'smoothing':(21,15), #21,15
-                              'x_inter': (), #240, 25
-                              'FK':{}, #'slope_hi':3.6/30,'slope_lo':3.6/80 # 20-70?
-                              'BP':{'freq_hi':1, #1
-                                    'freq_lo':0.2}, #0.2
-                              'SQRT':True, #True
-                              'spatial_av_vel': 50/3.6, #velocity in m/s used to shift data before spatial averaging, put False if not used
-                              'av_win': 5, #spatial averaging window size in number of data points
-                              'oversampling_factor': 5 #preprocessed data oversamling before tracking
-                              }
+# ============================================================
+#            PREPROCESSING PRIOR TO TRACKING
+# ============================================================
+# Preprocessing designed to enhance surface-wave energy
+# generated by road vehicles, which typically exhibit more
+# complex and less coherent wavefields than trains.
+default_preprocessing_dict = {
+    'smoothing': (21, 15),        # (time, space) smoothing windows
+    'x_inter': (),                # Optional spatial interpolation (disabled)
+    'FK': {
+        'slope_hi': 3.6 / 20,     # Upper apparent velocity bound [m/s]
+        'slope_lo': 3.6 / 70      # Lower apparent velocity bound [m/s]
+    },
+    'BP': {
+        'freq_lo': 0.2,           # Lower band-pass corner [Hz]
+        'freq_hi': 1.0            # Upper band-pass corner [Hz]
+    },
+    'SQRT': True,                 # Square-root amplitude scaling
+    'spatial_av_vel': 50 / 3.6,   # Reference velocity for alignment [m/s]
+    'av_win': 5,                  # Spatial averaging window (channels)
+    'oversampling_factor': 5      # Temporal oversampling factor
+}
 preprocessing_dict = default_preprocessing_dict
 
 
-#==============#
-### TRACKING ###
-#==============#
+# ============================================================
+#                  DETECTION AND TRACKING
+# ============================================================
+# Parameters controlling peak detection in the DAS amplitude
+# used to identify moving sources.
 tracking_args = {
-    "detect":{
-            "minprominence": 0.3, #0.3, 
-            "minseparation": 1, #1, 
-            "prominenceWindow": 600, 
-            }
+    "detect": {
+        "minprominence": 0.3,     # Minimum prominence of detected peaks
+        "minseparation": 1,       # Minimum separation between detections
+        "prominenceWindow": 600,  # Window for prominence estimation
+    }
 }
-sigma_a = 0.1 #0.1 
-R = 5 #10 #5
-reverse_amp=True
-nx_init = 3 #3
+# Kalman filter parameters for trajectory estimation
+sigma_a = 0.1    # Process noise (controls smoothness)
+R = 5            # Measurement noise covariance
+reverse_amp = True
+nx_init = 3      # Number of detections to initialize a track
 
-#Preselection parameters, use False in the dictionnary to deactivate a criteria
-preselection_dict = {'max_adjacent_nan': 50,#number of adjacent nan
-                     'max_total_nan': 0.2, #portion of nan
-                     'average_speed': (30/3.6, 80/3.6), # (minspeed, maxspeed) in m/s #40-100
-                     'curve_break': (5, 1.8, 0.1, 25), # (slinding mean window size, factor greater than percentile, max portion of points greater, specific quantile)
-                     'speed_fluctuations': (1.5, 0.1) # (factor greater than average_speed, max portion of points greater)
-                     }
 
-#SW window output size
-taper = 4  #Used to apodise before BP
-wlen_sw = 80 #250  #seconds
+# ============================================================
+#                TRAJECTORY PRESELECTION
+# ============================================================
+# Criteria used to reject spurious or non-physical trajectories.
+preselection_dict = {
+    'max_adjacent_nan': 50,               # Max consecutive missing samples
+    'max_total_nan': 0.2,                 # Max fraction of missing data
+    'average_speed': (30/3.6, 60/3.6),    # Accepted speed range [m/s]
+    'curve_break': (
+        5, 1.8, 0.1, 25                   # Curvature-based rejection
+    ),
+    'speed_fluctuations': (1.5, 0.1)      # Speed stability criterion
+}
+
+
+# ============================================================
+#           SURFACE-WAVE WINDOW EXTRACTION
+# ============================================================
+# Definition of the spatio-temporal windows extracted around
+# detected vehicle passages.
+taper = 4                 # Taper length [s]
+wlen_sw = 80               # Window length [s]
 wlen_sw += taper
-length_sw= 740 #2800 #meters
-temporal_spacing = wlen_sw - taper #minimum spacing between detection windows
-#spatial_ratio ?
+length_sw = 740            # Spatial aperture [m]
+temporal_spacing = wlen_sw - taper      # Minimum spacing between windows
 
 
-#===========#
-### XCORR ###
-#===========#
-xcorr_parameters = [{'wlen':2.3,
-                    'overlap':0.8,
-                    'delta_t':0.5,
-                    'time_window_to_xcorr':5,
-                    'norm':True,
-                    'norm_amp':True}] #list of parameters dictionnaries if multiple stacks are to be calculated
-#est ce qu'on retire cette possibilité au final ??
-include_other_side = True
-sw_bp_filt = True
-sw_whiten = True
-freq_lo = 0.5
-freq_hi = 40
+# ============================================================
+#            CROSS-CORRELATION / VSG PARAMETERS
+# ============================================================
+xcorr_parameters = [{
+    'wlen': 2.3,                   # Correlation window length [s]
+    'overlap': 0.0,                # Strong overlap for dense sampling
+    'delta_t': 0.2,                # Time step between windows [s]
+    'time_window_to_xcorr': 5.0,   # Lag window length [s]
+    'norm': True,                  # Temporal normalization
+    'norm_amp': True               # Amplitude normalization
+}]
 
-#MODIFIER LA CORREL POUR GERER LE WARNING: invalid value lorsqu'on normalise le VSG ligne 217
-
-
-#==============#
-### INTERPRETATION ###
-#==============#
-#coherence enhancement parameters
-coherence_enhancing = True
-slw_list = np.linspace(1/250, 1/1200, 16)
-#slw_list = 1/slw_list
-twin = int(500*0.1)
-xwin = int(100/9.6)
-decim = 20
+include_other_side = True          # Use both sides of pivot
+sw_bp_filt = True                  # Band-pass filtering of SW windows
+sw_whiten = True                   # Spectral whitening
+freq_lo = 0.5                      # Lower SW frequency [Hz]
+freq_hi = 40.0                     # Upper SW frequency [Hz]
 
 
-freqs = np.linspace(0.7, 25, int((25-0.7)*2.3*2)) #*xcorr_parameters['wlen'] on peut pas le fetch car on a implémenté une liste de combinaison de parametres....
-vels = np.linspace(2*9.6, 2100, int(2.3*35*3))#1/np.linspace(1/(2*9.6), 1/2100, int(wlen*35*3))
+# ============================================================
+#       INTERPRETATION / DISPERSION ANALYSIS PARAMETERS
+# ============================================================
+# Parameters controlling dispersion imaging and enhancement.
+coherence_enhancing = True         # Apply coherence-based enhancement
+slw_list = np.linspace(1/250, 1/1200, 16)  # Slowness grid [s/m]
+twin = int(500 * 0.1)              # Temporal smoothing window
+xwin = int(100 / dx)               # Spatial smoothing window (channels)
+decim = 20                         # Decimation factor
+
+# Frequency and velocity grids for dispersion spectra
+freqs = np.linspace(0.7, 25,int((25 - 0.7) * 2.3 * 2))
+vels = np.linspace(2 * dx, 2100,int(2.3 * 35 * 3))
+
+stack_norm = False                 # Normalize stacked VSGs
+offsets_to_keep = 'both'           # Use causal + acausal offsets
+lags_to_keep = 'causal'            # Restrict to causal lags only
 
 
-stack_norm = False
-offsets_to_keep = 'both'
-lags_to_keep = 'causal'
-
+# ============================================================
+#             DISPERSION MASKING / APERTURE CONTROL
+# ============================================================
+# Disabled here, as road-traffic-induced wavefields tend to be
+# more aperture-dependent and less stable.
 
 disp_masking = False
-max_cut_dist = 500 #np.max(np.abs(stack_full.x_axis))
-min_cut_dist = 150
-step_factor = 4 #Used to get a multiple of dx as cutting distance step
-
+max_cut_dist = 500                 # Maximum offset [m]
+min_cut_dist = 150                 # Minimum offset [m]
+step_factor = 4                    # Step size in multiples of dx

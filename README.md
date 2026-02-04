@@ -109,90 +109,113 @@ pandas
 tqdm
 ```
 
-A. Workflow control and execution
-Parameter	Cars	Trains	Description
-RUN_TRACKING	False	True	Enables automated vehicle detection and tracking along the fiber; mandatory for trains, optional for cars
-RUN_XCORR	True	False / conditional	Activates cross-correlation and VSG retrieval
-RUN_INTERPRETATION	True	False / conditional	Enables dispersion analysis and post-processing of stacked VSGs
-n_processes	7	15	Number of parallel CPU processes used for computation
 
-B. Tracking geometry and temporal selection
-Parameter	Cars	Trains	Description
-tracking_sections	(1750, 2100, 2450) m	(15200, 15550, 15900) m	Fiber section used for detection and tracking (start, pivot, end)
-tracking_start_date	2023-04-04	2025-04-01	Start date of tracking period
-tracking_end_date	2023-04-04	2025-06-30	End date of tracking period
-start_hour	5	2	Start hour (UTC) to restrict processing to periods with traffic
-end_hour	12	22	End hour (UTC)
-tracking_data_decimation_factor	10	1	Temporal decimation before tracking; higher values reduce data volume for slower road traffic
-C. DAS acquisition and geometry
-Parameter	Cars	Trains	Description
-dx	9.6 m	9.6 m	Inter-channel spacing along the fiber
+# DAS Processing Parameters
 
-D. Preprocessing prior to tracking
-Parameter	Cars	Trains	Description
-smoothing	(21, 15)	(21, 15)	Time and space smoothing windows
-FK.slope_lo	3.6/70 m/s	—	Lower apparent velocity bound for FK filtering
-FK.slope_hi	3.6/20 m/s	—	Upper apparent velocity bound for FK filtering
-BP.freq_lo	0.2 Hz	0.2 Hz	Lower band-pass corner for surface waves
-BP.freq_hi	1.0 Hz	1.0 Hz	Upper band-pass corner
-SQRT	True	True	Square-root amplitude scaling to reduce dominance of strong events
-spatial_av_vel	50/3.6 m/s	70/3.6 m/s	Reference velocity used to align signals before spatial averaging
-av_win	5	5	Spatial averaging window (channels)
-oversampling_factor	5	5	Temporal oversampling to improve detection and alignment
+## A. Workflow control and execution
 
-E. Detection and Kalman-filter tracking
-Parameter	Cars	Trains	Description
-minprominence	0.3	0.3	Minimum prominence for peak detection
-minseparation	1	1	Minimum separation between detections
-prominenceWindow	600	600	Window for prominence estimation
-sigma_a	0.1	0.1	Process noise in Kalman filter (trajectory smoothness)
-R	5	10	Measurement noise covariance
-nx_init	3	3	Number of detections required to initialize a track
-reverse_amp	True	True	Detects vehicles as amplitude minima or maxima
+| Parameter           | Cars   | Trains          | Description                                                                 |
+|--------------------|--------|----------------|-----------------------------------------------------------------------------|
+| RUN_TRACKING        | False  | True           | Enables automated vehicle detection and tracking along the fiber; mandatory for trains, optional for cars |
+| RUN_XCORR           | True   | False / conditional | Activates cross-correlation and VSG retrieval                               |
+| RUN_INTERPRETATION  | True   | False / conditional | Enables dispersion analysis and post-processing of stacked VSGs             |
+| n_processes         | 7      | 15             | Number of parallel CPU processes used for computation                        |
 
-F. Trajectory preselection and quality control
-Parameter	Cars	Trains	Description
-max_adjacent_nan	50	50	Maximum number of consecutive missing samples
-max_total_nan	0.2	0.2	Maximum fraction of missing samples
-average_speed	30–60 km/h	40–100 km/h	Accepted average velocity range
-curve_break	(5, 1.8, 0.1, 25)	Same	Rejects trajectories with strong curvature breaks
-speed_fluctuations	(1.5, 0.1)	(1.5, 0.1)	Rejects trajectories with excessive speed variability
-G. Surface-wave window extraction
-Parameter	Cars	Trains	Description
-wlen_sw	80 s	200 s	Temporal length of extracted surface-wave windows
-length_sw	740 m	2800 m	Spatial aperture of SW windows
-taper	4 s	4 s	Apodization length
-temporal_spacing	76 s	196 s	Minimum spacing between successive windows
+## B. Tracking geometry and temporal selection
 
-H. Cross-correlation and VSG construction
-Parameter	Cars	Trains	Description
-wlen	2.3 s	2.3 s	Correlation window length
-overlap	0.8	0.0	Overlap between correlation windows
-delta_t	0.5 s	0.5 s	Time step between windows
-time_window_to_xcorr	5 s	3 s	Maximum correlation lag
-norm	True	True	Temporal normalization before correlation
-norm_amp	True	True	Amplitude normalization
-sw_whiten	True	True	Spectral whitening of SW windows
-freq_lo	0.5 Hz	0.5 Hz	Lower frequency bound
-freq_hi	40 Hz	40 Hz	Upper frequency bound
+| Parameter                       | Cars                  | Trains                  | Description                                                                 |
+|---------------------------------|----------------------|------------------------|-----------------------------------------------------------------------------|
+| tracking_sections               | (1750, 2100, 2450) m | (15200, 15550, 15900) m | Fiber section used for detection and tracking (start, pivot, end)           |
+| tracking_start_date             | 2023-04-04           | 2025-04-01             | Start date of tracking period                                               |
+| tracking_end_date               | 2023-04-04           | 2025-06-30             | End date of tracking period                                                 |
+| start_hour                      | 5                    | 2                      | Start hour (UTC) to restrict processing to periods with traffic             |
+| end_hour                        | 12                   | 22                     | End hour (UTC)                                                              |
+| tracking_data_decimation_factor | 10                   | 1                      | Temporal decimation before tracking; higher values reduce data volume for slower road traffic |
 
-I. Dispersion analysis and post-processing
-Parameter	Cars	Trains	Description
-coherence_enhancing	True	True	Enhances coherent surface-wave energy
-slw_list	1/250–1/1200 s/m	Same	Slowness grid for coherence analysis
-freqs	0.7–25 Hz	0.7–25 Hz	Frequency grid for dispersion imaging
-vels	19–2100 m/s	19–2100 m/s	Phase-velocity grid
-stack_norm	False	False	Normalization of stacked VSGs
-offsets_to_keep	both	both	Causal and acausal offsets
-lags_to_keep	causal	causal	Restriction to causal lags
+## C. DAS acquisition and geometry
 
-J. Dispersion masking (aperture-dependent)
-Parameter	Cars	Trains	Description
-disp_masking	False	True	Activates recursive aperture-dependent dispersion masking
-max_cut_dist	—	500 m	Maximum inter-channel distance
-min_cut_dist	—	150 m	Minimum inter-channel distance
-step_factor	—	4	Aperture reduction step (multiple of dx)
+| Parameter | Cars  | Trains | Description                       |
+|-----------|-------|--------|-----------------------------------|
+| dx        | 9.6 m | 9.6 m  | Inter-channel spacing along the fiber |
 
----
+## D. Preprocessing prior to tracking
+
+| Parameter             | Cars         | Trains       | Description                                                      |
+|-----------------------|--------------|-------------|------------------------------------------------------------------|
+| smoothing             | (21, 15)     | (21, 15)    | Time and space smoothing windows                                  |
+| FK.slope_lo           | 3.6/70 m/s   | —           | Lower apparent velocity bound for FK filtering                    |
+| FK.slope_hi           | 3.6/20 m/s   | —           | Upper apparent velocity bound for FK filtering                    |
+| BP.freq_lo            | 0.2 Hz       | 0.2 Hz      | Lower band-pass corner for surface waves                           |
+| BP.freq_hi            | 1.0 Hz       | 1.0 Hz      | Upper band-pass corner                                            |
+| SQRT                  | True         | True        | Square-root amplitude scaling to reduce dominance of strong events |
+| spatial_av_vel        | 50/3.6 m/s   | 70/3.6 m/s  | Reference velocity used to align signals before spatial averaging |
+| av_win                | 5            | 5           | Spatial averaging window (channels)                                |
+| oversampling_factor   | 5            | 5           | Temporal oversampling to improve detection and alignment           |
+
+## E. Detection and Kalman-filter tracking
+
+| Parameter        | Cars | Trains | Description                                                   |
+|-----------------|------|--------|---------------------------------------------------------------|
+| minprominence    | 0.3  | 0.3    | Minimum prominence for peak detection                         |
+| minseparation    | 1    | 1      | Minimum separation between detections                         |
+| prominenceWindow | 600  | 600    | Window for prominence estimation                               |
+| sigma_a          | 0.1  | 0.1    | Process noise in Kalman filter (trajectory smoothness)        |
+| R                | 5    | 10     | Measurement noise covariance                                   |
+| nx_init          | 3    | 3      | Number of detections required to initialize a track           |
+| reverse_amp      | True | True   | Detects vehicles as amplitude minima or maxima                |
+
+## F. Trajectory preselection and quality control
+
+| Parameter            | Cars           | Trains         | Description                                                       |
+|----------------------|----------------|---------------|-------------------------------------------------------------------|
+| max_adjacent_nan      | 50             | 50            | Maximum number of consecutive missing samples                     |
+| max_total_nan         | 0.2            | 0.2           | Maximum fraction of missing samples                                |
+| average_speed         | 30–60 km/h     | 40–100 km/h   | Accepted average velocity range                                     |
+| curve_break           | (5, 1.8, 0.1, 25) | Same        | Rejects trajectories with strong curvature breaks                 |
+| speed_fluctuations    | (1.5, 0.1)    | (1.5, 0.1)   | Rejects trajectories with excessive speed variability             |
+
+## G. Surface-wave window extraction
+
+| Parameter        | Cars    | Trains  | Description                              |
+|-----------------|---------|---------|------------------------------------------|
+| wlen_sw         | 80 s    | 200 s   | Temporal length of extracted SW windows  |
+| length_sw       | 740 m   | 2800 m  | Spatial aperture of SW windows           |
+| taper           | 4 s     | 4 s     | Apodization length                        |
+| temporal_spacing| 76 s    | 196 s   | Minimum spacing between successive windows |
+
+## H. Cross-correlation and VSG construction
+
+| Parameter            | Cars | Trains | Description                                      |
+|----------------------|------|--------|--------------------------------------------------|
+| wlen                 | 2.3 s| 2.3 s  | Correlation window length                         |
+| overlap              | 0.8  | 0.0    | Overlap between correlation windows              |
+| delta_t              | 0.5 s| 0.5 s  | Time step between windows                         |
+| time_window_to_xcorr | 5 s  | 3 s    | Maximum correlation lag                           |
+| norm                 | True | True   | Temporal normalization before correlation        |
+| norm_amp             | True | True   | Amplitude normalization                           |
+| sw_whiten            | True | True   | Spectral whitening of SW windows                 |
+| freq_lo              | 0.5 Hz| 0.5 Hz| Lower frequency bound                             |
+| freq_hi              | 40 Hz| 40 Hz  | Upper frequency bound                             |
+
+## I. Dispersion analysis and post-processing
+
+| Parameter              | Cars             | Trains           | Description                                         |
+|------------------------|-----------------|-----------------|-----------------------------------------------------|
+| coherence_enhancing    | True             | True             | Enhances coherent surface-wave energy             |
+| slw_list               | 1/250–1/1200 s/m | Same            | Slowness grid for coherence analysis               |
+| freqs                  | 0.7–25 Hz        | 0.7–25 Hz       | Frequency grid for dispersion imaging             |
+| vels                   | 19–2100 m/s      | 19–2100 m/s     | Phase-velocity grid                                |
+| stack_norm             | False            | False           | Normalization of stacked VSGs                     |
+| offsets_to_keep        | both             | both            | Causal and acausal offsets                          |
+| lags_to_keep           | causal           | causal          | Restriction to causal lags                         |
+
+## J. Dispersion masking (aperture-dependent)
+
+| Parameter       | Cars  | Trains | Description                                     |
+|----------------|-------|--------|-------------------------------------------------|
+| disp_masking    | False | True   | Activates recursive aperture-dependent dispersion masking |
+| max_cut_dist    | —     | 500 m  | Maximum inter-channel distance                  |
+| min_cut_dist    | —     | 150 m  | Minimum inter-channel distance                  |
+| step_factor     | —     | 4      | Aperture reduction step (multiple of dx)       |
 
 

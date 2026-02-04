@@ -134,11 +134,13 @@ tqdm
 
 ## C. DAS acquisition and geometry
 
+|            |    |           |                                                                  |
 |-----------|-------|--------|-----------------------------------|
 | dx        | 9.6 m | 9.6 m  | Inter-channel spacing along the fiber |
 
 ## D. Preprocessing prior to tracking
 
+|            |    |           |                                                                  |
 |-----------------------|--------------|-------------|------------------------------------------------------------------|
 | smoothing             | (21, 15)     | (21, 15)    | Time and space smoothing windows                                  |
 | FK.slope_lo           | 3.6/70 m/s   | —           | Lower apparent velocity bound for FK filtering                    |
@@ -152,6 +154,7 @@ tqdm
 
 ## E. Detection and Kalman-filter tracking
 
+|            |    |           |                                                                  |
 |-----------------|------|--------|---------------------------------------------------------------|
 | minprominence    | 0.3  | 0.3    | Minimum prominence for peak detection                         |
 | minseparation    | 1    | 1      | Minimum separation between detections                         |
@@ -163,6 +166,7 @@ tqdm
 
 ## F. Trajectory preselection and quality control
 
+|            |    |           |                                                                  |
 |----------------------|----------------|---------------|-------------------------------------------------------------------|
 | max_adjacent_nan      | 50             | 50            | Maximum number of consecutive missing samples                     |
 | max_total_nan         | 0.2            | 0.2           | Maximum fraction of missing samples                                |
@@ -172,6 +176,7 @@ tqdm
 
 ## G. Surface-wave window extraction
 
+|            |    |           |                                                                  |
 |-----------------|---------|---------|------------------------------------------|
 | wlen_sw         | 80 s    | 200 s   | Temporal length of extracted SW windows  |
 | length_sw       | 740 m   | 2800 m  | Spatial aperture of SW windows           |
@@ -180,6 +185,7 @@ tqdm
 
 ## H. Cross-correlation and VSG construction
 
+|            |    |           |                                                                  |
 |----------------------|------|--------|--------------------------------------------------|
 | wlen                 | 2.3 s| 2.3 s  | Correlation window length                         |
 | overlap              | 0.8  | 0.0    | Overlap between correlation windows              |
@@ -193,6 +199,7 @@ tqdm
 
 ## I. Dispersion analysis and post-processing
 
+|            |    |           |                                                                  |
 |------------------------|-----------------|-----------------|-----------------------------------------------------|
 | coherence_enhancing    | True             | True             | Enhances coherent surface-wave energy             |
 | slw_list               | 1/250–1/1200 s/m | Same            | Slowness grid for coherence analysis               |
@@ -204,6 +211,7 @@ tqdm
 
 ## J. Dispersion masking (aperture-dependent)
 
+|            |    |           |                                                                  |
 |----------------|-------|--------|-------------------------------------------------|
 | disp_masking    | False | True   | Activates recursive aperture-dependent dispersion masking |
 | max_cut_dist    | —     | 500 m  | Maximum inter-channel distance                  |

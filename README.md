@@ -112,9 +112,11 @@ tqdm
 
 # DAS Processing Parameters
 
+The following table summarize the input parameters and give examples for two types of infrastrctures: a fiber optic cable running along a road with frequent car signals, and along a railway. It includes also short descriptions for each parameter
+
 ## Workflow control and execution
 
-| Parameter           | Example 1 - Cars   | Example 2 - Trains          | Description                                                                 |
+| Parameter           | Example 1 - Along road   | Example 2 - Along railways          | Description                                                                 |
 |--------------------|--------|----------------|-----------------------------------------------------------------------------|
 | RUN_TRACKING        | True or False  | True or False           | Enables automated vehicle detection and tracking along the fiber; mandatory for trains, optional for cars |
 | RUN_XCORR           | True or False   | True or False | Activates cross-correlation and VSG retrieval                               |

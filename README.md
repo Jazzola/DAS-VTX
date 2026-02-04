@@ -114,33 +114,30 @@ tqdm
 
 ## A. Workflow control and execution
 
-| Parameter           | Cars   | Trains          | Description                                                                 |
+| Parameter           | Example 1 - Cars   | Example 2 - Trains          | Description                                                                 |
 |--------------------|--------|----------------|-----------------------------------------------------------------------------|
-| RUN_TRACKING        | False  | True           | Enables automated vehicle detection and tracking along the fiber; mandatory for trains, optional for cars |
-| RUN_XCORR           | True   | False / conditional | Activates cross-correlation and VSG retrieval                               |
-| RUN_INTERPRETATION  | True   | False / conditional | Enables dispersion analysis and post-processing of stacked VSGs             |
-| n_processes         | 7      | 15             | Number of parallel CPU processes used for computation                        |
+| RUN_TRACKING        | True or False  | True or False           | Enables automated vehicle detection and tracking along the fiber; mandatory for trains, optional for cars |
+| RUN_XCORR           | True or False   | True or False | Activates cross-correlation and VSG retrieval                               |
+| RUN_INTERPRETATION  | True or False   | True or False | Enables dispersion analysis and post-processing of stacked VSGs             |
+| n_processes         | 10      | 10             | int, number of parallel CPU processes used for computation                        |
 
 ## B. Tracking geometry and temporal selection
 
-| Parameter                       | Cars                  | Trains                  | Description                                                                 |
 |---------------------------------|----------------------|------------------------|-----------------------------------------------------------------------------|
 | tracking_sections               | (1750, 2100, 2450) m | (15200, 15550, 15900) m | Fiber section used for detection and tracking (start, pivot, end)           |
 | tracking_start_date             | 2023-04-04           | 2025-04-01             | Start date of tracking period                                               |
-| tracking_end_date               | 2023-04-04           | 2025-06-30             | End date of tracking period                                                 |
-| start_hour                      | 5                    | 2                      | Start hour (UTC) to restrict processing to periods with traffic             |
-| end_hour                        | 12                   | 22                     | End hour (UTC)                                                              |
-| tracking_data_decimation_factor | 10                   | 1                      | Temporal decimation before tracking; higher values reduce data volume for slower road traffic |
+| tracking_end_date               | 2023-04-20           | 2025-06-30             | End date of tracking period                                                 |
+| start_hour                      | 2                    | 2                      | Start hour (UTC) to restrict processing to periods with traffic             |
+| end_hour                        | 22                   | 22                     | End hour (UTC)                                                              |
+| tracking_data_decimation_factor | 5                   | 5                      | Temporal decimation before tracking; higher values reduce data volume for slower road traffic |
 
 ## C. DAS acquisition and geometry
 
-| Parameter | Cars  | Trains | Description                       |
 |-----------|-------|--------|-----------------------------------|
 | dx        | 9.6 m | 9.6 m  | Inter-channel spacing along the fiber |
 
 ## D. Preprocessing prior to tracking
 
-| Parameter             | Cars         | Trains       | Description                                                      |
 |-----------------------|--------------|-------------|------------------------------------------------------------------|
 | smoothing             | (21, 15)     | (21, 15)    | Time and space smoothing windows                                  |
 | FK.slope_lo           | 3.6/70 m/s   | —           | Lower apparent velocity bound for FK filtering                    |
@@ -154,7 +151,6 @@ tqdm
 
 ## E. Detection and Kalman-filter tracking
 
-| Parameter        | Cars | Trains | Description                                                   |
 |-----------------|------|--------|---------------------------------------------------------------|
 | minprominence    | 0.3  | 0.3    | Minimum prominence for peak detection                         |
 | minseparation    | 1    | 1      | Minimum separation between detections                         |
@@ -166,7 +162,6 @@ tqdm
 
 ## F. Trajectory preselection and quality control
 
-| Parameter            | Cars           | Trains         | Description                                                       |
 |----------------------|----------------|---------------|-------------------------------------------------------------------|
 | max_adjacent_nan      | 50             | 50            | Maximum number of consecutive missing samples                     |
 | max_total_nan         | 0.2            | 0.2           | Maximum fraction of missing samples                                |
@@ -176,7 +171,6 @@ tqdm
 
 ## G. Surface-wave window extraction
 
-| Parameter        | Cars    | Trains  | Description                              |
 |-----------------|---------|---------|------------------------------------------|
 | wlen_sw         | 80 s    | 200 s   | Temporal length of extracted SW windows  |
 | length_sw       | 740 m   | 2800 m  | Spatial aperture of SW windows           |
@@ -185,7 +179,6 @@ tqdm
 
 ## H. Cross-correlation and VSG construction
 
-| Parameter            | Cars | Trains | Description                                      |
 |----------------------|------|--------|--------------------------------------------------|
 | wlen                 | 2.3 s| 2.3 s  | Correlation window length                         |
 | overlap              | 0.8  | 0.0    | Overlap between correlation windows              |
@@ -199,7 +192,6 @@ tqdm
 
 ## I. Dispersion analysis and post-processing
 
-| Parameter              | Cars             | Trains           | Description                                         |
 |------------------------|-----------------|-----------------|-----------------------------------------------------|
 | coherence_enhancing    | True             | True             | Enhances coherent surface-wave energy             |
 | slw_list               | 1/250–1/1200 s/m | Same            | Slowness grid for coherence analysis               |
@@ -211,7 +203,6 @@ tqdm
 
 ## J. Dispersion masking (aperture-dependent)
 
-| Parameter       | Cars  | Trains | Description                                     |
 |----------------|-------|--------|-------------------------------------------------|
 | disp_masking    | False | True   | Activates recursive aperture-dependent dispersion masking |
 | max_cut_dist    | —     | 500 m  | Maximum inter-channel distance                  |

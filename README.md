@@ -90,24 +90,26 @@ The output directory is organized into the following subfolders:
 
 **detects/**
 
-Contains detection results, tracked trajectories, and extracted surface-wave data windows.
 Files are stored in NumPy .npy format and are classified by date and time according to the corresponding input DAS data file.
+Contains detection results, stored in form a surface wave window object. It includes tracked trajectories (attributes veh_state_t and veh_state_x), and extracted surface-wave data windows (attributes x_axis, t_axis and data).
 
 **VSGs/**
 
 Contains Virtual Shot Gathers (VSGs).
-Files are stored in NumPy .npz format and include:
-- The stacked VSG
-- Inter-channel distance and offset arrays
-- Metadata describing the SNR evolution as a function of the number of stacked individual VSGs
+Files are stored in NumPy .npz format. The archive includes multiple arrays:
+- The correlation parameters (keyword parameters)
+- The stacked VSG (keyword stack),in form of a VSG object, which attributes include the axis (t_axis and x_axis) and the data (XCF_out)
+- Metadata describing the SNR evolution as a function of the number of stacked individual VSGs (keyword SNR and vsg_times)
 
 **DISPs/**
 
 Contains dispersion spectra derived from stacked VSGs.
-Files are stored in NumPy .npz format and include:
-- The stacked dispersion spectrum
-- Frequency array
-- Phase-velocity array
+Files are stored in NumPy .npz format. The archive includes multiple arrays:
+- The analysis parameters (keyword parameters)
+- The stacked dispersion spectrum (keyword disp)
+- Frequency array (keyword freqs)
+- Phase-velocity array (keyword vels)
+- The mask used in the inter-channel distance dependant masking (keyword mask)
 
 **FIGs/**
 

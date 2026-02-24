@@ -86,15 +86,15 @@ Processed data and results are written to the output folder defined in the confi
 
 ## **Outputs**
 
-
-
 The output directory is organized into the following subfolders:
 
 **detects/**
+
 Contains detection results, tracked trajectories, and extracted surface-wave data windows.
 Files are stored in NumPy .npy format and are classified by date and time according to the corresponding input DAS data file.
 
 **VSGs/**
+
 Contains Virtual Shot Gathers (VSGs).
 Files are stored in NumPy .npz format and include:
 - The stacked VSG
@@ -102,6 +102,7 @@ Files are stored in NumPy .npz format and include:
 - Metadata describing the SNR evolution as a function of the number of stacked individual VSGs
 
 **DISPs/**
+
 Contains dispersion spectra derived from stacked VSGs.
 Files are stored in NumPy .npz format and include:
 - The stacked dispersion spectrum
@@ -109,6 +110,7 @@ Files are stored in NumPy .npz format and include:
 - Phase-velocity array
 
 **FIGs/**
+
 Contains diagnostic figures generated during processing, including:
 - Dispersion spectra
 - SNR evolution versus number of stacked VSGs

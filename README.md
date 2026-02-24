@@ -122,7 +122,7 @@ All processing steps and execution details are recorded in a timestamped log fil
 
 ---
 
-## **Dependencies **
+## **Dependencies**
 
 ```text
 numpy
@@ -135,7 +135,7 @@ tqdm
 ```
 
 
-# ** DAS Processing Parameters**
+# **DAS Processing Parameters**
 
 The following table summarize the input parameters and give examples for two types of infrastrctures: a fiber optic cable running along a road with frequent car signals, and along a railway. It includes also short descriptions for each parameter
 

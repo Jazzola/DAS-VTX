@@ -88,10 +88,10 @@ Processed data and results are written to the output folder defined in the confi
 
 The output directory typically contains:
 
-* Processed and stacked correlation functions
-* Virtual shot gathers
-* Dispersion images or extracted dispersion curves
-* Diagnostic plots and logs
+* Detections, tracked trajectories and surface wave data windows (folder detects): stored in npy archive, classified by date and time according to the input DAS data file
+* Virtual shot gathers (folder VSGs): stored in npz archive, including the stacked VSG, the inter-channel distance and offset arrays, and a description of the SNR evolution with time of individual VSGs
+* Dispersion spectra (folder DISPs): stored in npz archive, including the stacked dispersion spectrum, the frequency and phase velocity arrays
+* Diagnostic plots (folder FIGs): Diespersion spectra, SNR evolution with number of stacked VSG, stacked VSG
 
 All progress is recorded in a timestamped log file.
 

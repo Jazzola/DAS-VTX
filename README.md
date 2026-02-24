@@ -5,7 +5,7 @@ The workflow automates the end-to-end process — from signal tracking to cross-
 
 ---
 
-## 🧠 **Overview**
+## **Overview**
 
 The program is structured into **three independent processing stages**, each controlled through configuration files and launched via a single supervising script, `main.py`.
 
@@ -22,7 +22,7 @@ Each stage can be **activated or deactivated** in the configuration file, depend
 
 ---
 
-## ⚙️ **Project Structure**
+## **Project Structure**
 
 ```
 DAS-VTX/
@@ -53,7 +53,7 @@ DAS-VTX/
 
 ---
 
-## 🚀 **Running the Code**
+## **Running the Code**
 
 ### 1. Configure the Run
 
@@ -84,7 +84,7 @@ Processed data and results are written to the output folder defined in the confi
 
 ---
 
-## 📁 **Outputs**
+## **Outputs**
 
 The output directory typically contains:
 
@@ -97,7 +97,7 @@ All progress is recorded in a timestamped log file.
 
 ---
 
-## 🧩 **Dependencies and Parameters**
+## **Dependencies **
 
 ```text
 numpy
@@ -110,7 +110,7 @@ tqdm
 ```
 
 
-# DAS Processing Parameters
+# ** DAS Processing Parameters**
 
 The following table summarize the input parameters and give examples for two types of infrastrctures: a fiber optic cable running along a road with frequent car signals, and along a railway. It includes also short descriptions for each parameter
 

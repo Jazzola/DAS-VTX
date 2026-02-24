@@ -86,14 +86,35 @@ Processed data and results are written to the output folder defined in the confi
 
 ## **Outputs**
 
-The output directory typically contains:
 
-* Detections, tracked trajectories and surface wave data windows (folder detects): stored in npy archive, classified by date and time according to the input DAS data file
-* Virtual shot gathers (folder VSGs): stored in npz archive, including the stacked VSG, the inter-channel distance and offset arrays, and a description of the SNR evolution with time of individual VSGs
-* Dispersion spectra (folder DISPs): stored in npz archive, including the stacked dispersion spectrum, the frequency and phase velocity arrays
-* Diagnostic plots (folder FIGs): Diespersion spectra, SNR evolution with number of stacked VSG, stacked VSG
 
-All progress is recorded in a timestamped log file.
+The output directory is organized into the following subfolders:
+
+** detects/ **
+Contains detection results, tracked trajectories, and extracted surface-wave data windows.
+Files are stored in NumPy .npy format and are classified by date and time according to the corresponding input DAS data file.
+
+** VSGs/ **
+Contains Virtual Shot Gathers (VSGs).
+Files are stored in NumPy .npz format and include:
+- The stacked VSG
+- Inter-channel distance and offset arrays
+- Metadata describing the SNR evolution as a function of the number of stacked individual VSGs
+
+**DISPs/**
+Contains dispersion spectra derived from stacked VSGs.
+Files are stored in NumPy .npz format and include:
+- The stacked dispersion spectrum
+- Frequency array
+- Phase-velocity array
+
+**FIGs/**
+Contains diagnostic figures generated during processing, including:
+- Dispersion spectra
+- SNR evolution versus number of stacked VSGs
+- Stacked VSG visualizations
+
+All processing steps and execution details are recorded in a timestamped log file located in the main output directory.
 
 ---
 

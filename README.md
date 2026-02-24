@@ -90,11 +90,11 @@ Processed data and results are written to the output folder defined in the confi
 
 The output directory is organized into the following subfolders:
 
-** detects/ **
+**detects/**
 Contains detection results, tracked trajectories, and extracted surface-wave data windows.
 Files are stored in NumPy .npy format and are classified by date and time according to the corresponding input DAS data file.
 
-** VSGs/ **
+**VSGs/**
 Contains Virtual Shot Gathers (VSGs).
 Files are stored in NumPy .npz format and include:
 - The stacked VSG

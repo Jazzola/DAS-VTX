@@ -154,7 +154,7 @@ temporal_spacing = (
 xcorr_parameters = [{
     'wlen': 5.8,                   # Correlation window length [s]
     'overlap': 0.0,                # Overlap between windows
-    'delta_t': 0.5,                # Time step between windows [s]
+    'delta_t': 0.5,                # At a pivot channel, time shift between the correlation window and the estimated trajectory [s]
     'time_window_to_xcorr': 6.5,   # Lag window length [s]
     'norm': True,                  # Temporal normalization
     'norm_amp': True               # Amplitude normalization

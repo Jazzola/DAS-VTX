@@ -155,7 +155,7 @@ temporal_spacing = wlen_sw - taper      # Minimum spacing between windows
 xcorr_parameters = [{
     'wlen': 2.3,                   # Correlation window length [s]
     'overlap': 0.0,                # Strong overlap for dense sampling
-    'delta_t': 0.2,                # Time step between windows [s]
+    'delta_t': 0.2,                # At a pivot channel, time shift between the correlation window and the estimated trajectory [s]
     'time_window_to_xcorr': 5.0,   # Lag window length [s]
     'norm': True,                  # Temporal normalization
     'norm_amp': True               # Amplitude normalization

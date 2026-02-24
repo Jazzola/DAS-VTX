@@ -114,13 +114,13 @@ tqdm
 
 The following table summarize the input parameters and give examples for two types of infrastrctures: a fiber optic cable running along a road with frequent car signals, and along a railway. It includes also short descriptions for each parameter
 
-## Workflow control and execution
+## Workflow control and execution. Processing steps can be activated as a standalone or part of the entire workflow
 
 | Parameter           | Example 1 - Along road   | Example 2 - Along railways          | Description                                                                 |
 |--------------------|--------|----------------|-----------------------------------------------------------------------------|
-| RUN_TRACKING        | True or False  | True or False           | Enables automated vehicle detection and tracking along the fiber; mandatory for trains, optional for cars |
-| RUN_XCORR           | True or False   | True or False | Activates cross-correlation and VSG retrieval                               |
-| RUN_INTERPRETATION  | True or False   | True or False | Enables dispersion analysis and post-processing of stacked VSGs             |
+| RUN_TRACKING        | True or False  | True or False           | Enables automated vehicle detection and tracking along the fiber   |
+| RUN_XCORR           | True or False   | True or False | Activates cross-correlation and VSG retrieval (including stacking)      |
+| RUN_INTERPRETATION  | True or False   | True or False | Enables dispersion analysis and post-processing of stacked VSGs       |
 | n_processes         | 10      | 10             | int, number of parallel CPU processes used for computation                        |
 
 ## Tracking geometry and temporal selection
@@ -132,7 +132,7 @@ The following table summarize the input parameters and give examples for two typ
 | tracking_end_date               | 2023-04-20           | 2025-06-30             | End date of tracking period                                                 |
 | start_hour                      | 2                    | 2                      | Start hour (UTC) to restrict processing to periods with traffic             |
 | end_hour                        | 22                   | 22                     | End hour (UTC)                                                              |
-| tracking_data_decimation_factor | 5                   | 5                      | Temporal decimation before tracking; higher values reduce data volume for slower road traffic |
+| tracking_data_decimation_factor | 10                   | 5                      | Temporal decimation applied before tracking to reduce data volume while preserving kinematics |
 
 ## DAS acquisition and geometry
 
@@ -172,31 +172,31 @@ The following table summarize the input parameters and give examples for two typ
 |----------------------|----------------|---------------|-------------------------------------------------------------------|
 | max_adjacent_nan      | 50             | 50            | Maximum number of consecutive missing samples                     |
 | max_total_nan         | 0.2            | 0.2           | Maximum fraction of missing samples                                |
-| average_speed         | 30–60 km/h     | 40–100 km/h   | Accepted average velocity range                                     |
-| curve_break           | (5, 1.8, 0.1, 25) | Same        | Rejects trajectories with strong curvature breaks                 |
+| average_speed         | 30–60 km/h     | 20–100 km/h   | Accepted average velocity range                                     |
+| curve_break           | (5, 1.8, 0.1, 25) | (5, 1.8, 0.1, 25)        | Rejects trajectories with strong curvature breaks                 |
 | speed_fluctuations    | (1.5, 0.1)    | (1.5, 0.1)   | Rejects trajectories with excessive speed variability             |
 
 ## Surface-wave window extraction
 
 |            |    |           |                                                                  |
 |-----------------|---------|---------|------------------------------------------|
-| wlen_sw         | 80 s    | 200 s   | Temporal length of extracted SW windows  |
-| length_sw       | 740 m   | 2800 m  | Spatial aperture of SW windows           |
+| wlen_sw         | 80 s   | 80 s   | Temporal length of extracted SW windows  |
+| length_sw       | 740 m   | 740 m  | Spatial aperture of SW windows           |
 | taper           | 4 s     | 4 s     | Apodization length                        |
-| temporal_spacing| 76 s    | 196 s   | Minimum spacing between successive windows |
+| temporal_spacing| wlen_sw - taper    | wlen_sw - taper   | Minimum spacing between successive detection windows |
 
 ## Cross-correlation and VSG construction
 
 |            |    |           |                                                                  |
 |----------------------|------|--------|--------------------------------------------------|
-| wlen                 | 2.3 s| 2.3 s  | Correlation window length                         |
-| overlap              | 0.8  | 0.0    | Overlap between correlation windows              |
-| delta_t              | 0.5 s| 0.5 s  | Time step between windows                         |
-| time_window_to_xcorr | 5 s  | 3 s    | Maximum correlation lag                           |
+| wlen                 | 2.3 s| 5.8 s  | Correlation window length                         |
+| overlap              | 0.0  | 0.0    | Overlap between correlation windows              |
+| delta_t              | 0.2 s| 0.5 s  | At a pivot channel, time shift between the correlation window and the estimated trajectory                         |
+| time_window_to_xcorr | 3 s  | 6 s    | If overlaped windows, time window in which correlation windowds are defined                   |
 | norm                 | True | True   | Temporal normalization before correlation        |
 | norm_amp             | True | True   | Amplitude normalization                           |
 | sw_whiten            | True | True   | Spectral whitening of SW windows                 |
-| freq_lo              | 0.5 Hz| 0.5 Hz| Lower frequency bound                             |
+| freq_lo              | 0.5 Hz| 0.5 Hz| Lower frequency bound for the analysis of surface waves                           |
 | freq_hi              | 40 Hz| 40 Hz  | Upper frequency bound                             |
 
 ## Dispersion analysis and post-processing
@@ -204,7 +204,7 @@ The following table summarize the input parameters and give examples for two typ
 |            |    |           |                                                                  |
 |------------------------|-----------------|-----------------|-----------------------------------------------------|
 | coherence_enhancing    | True             | True             | Enhances coherent surface-wave energy             |
-| slw_list               | 1/250–1/1200 s/m | Same            | Slowness grid for coherence analysis               |
+| slw_list               | 1/250–1/1200 s/m | 1/250–1/1200 s/m            | Slowness grid for coherence analysis               |
 | freqs                  | 0.7–25 Hz        | 0.7–25 Hz       | Frequency grid for dispersion imaging             |
 | vels                   | 19–2100 m/s      | 19–2100 m/s     | Phase-velocity grid                                |
 | stack_norm             | False            | False           | Normalization of stacked VSGs                     |
@@ -215,9 +215,9 @@ The following table summarize the input parameters and give examples for two typ
 
 |            |    |           |                                                                  |
 |----------------|-------|--------|-------------------------------------------------|
-| disp_masking    | False | True   | Activates recursive aperture-dependent dispersion masking |
-| max_cut_dist    | —     | 500 m  | Maximum inter-channel distance                  |
-| min_cut_dist    | —     | 150 m  | Minimum inter-channel distance                  |
-| step_factor     | —     | 4      | Aperture reduction step (multiple of dx)       |
+| disp_masking    | True | True   | Activates recursive aperture-dependent dispersion masking |
+| max_cut_dist    | 500 m     | 500 m  | Maximum inter-channel distance                  |
+| min_cut_dist    | 150 m     | 150 m  | Minimum inter-channel distance                  |
+| step_factor     | 4     | 4      | Aperture reduction step (multiple of dx)       |
 
 

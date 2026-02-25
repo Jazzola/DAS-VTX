@@ -43,8 +43,6 @@ DAS-VTX/
 ├── Tracker_class.py             # Class for vehicle tracking
 ├── VSG_class.py                 # Class for virtual shot gather handling
 │
-├── temp_xcorr.py                # Scripts for correlation
-│
 ├── out_test/                    # Example output directory
 ├── test.log                     # Example log file generated during run
 ```
@@ -57,8 +55,8 @@ DAS-VTX/
 
 Edit one of the configuration files:
 
-* `config_voiture.py` → for **car-related** experiments
-* `config_train.py` → for **train-related** experiments
+* `config_cars.py` → for **car-related** experiments
+* `config_trains.py` → for **train-related** experiments
 
 Set:
 

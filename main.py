@@ -3,8 +3,8 @@ from multiprocessing import Pool
 import os
 import shutil
 
-config_to_use = 'train'
-if config_to_use == 'voiture' or config_to_use == 'train':
+config_to_use = 'trains'
+if config_to_use == 'cars' or config_to_use == 'trains':
     shutil.copy(os.getcwd()+'/config_'+config_to_use+'.py', os.getcwd()+'/config.py')
 
 from data_loader import DataLoader

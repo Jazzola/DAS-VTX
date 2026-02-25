@@ -27,9 +27,8 @@ Each stage can be **activated or deactivated** in the configuration file, depend
 ```
 DAS-VTX/
 ├── main.py                     # Supervises and executes the full workflow
-├── config.py                   # General configuration file
 ├── config_train.py              # Configuration for train-based DAS data
-├── config_voiture.py            # Configuration for car-based DAS data
+├── config_cars.py            # Configuration for car-based DAS data
 │
 ├── tracking_process.py          # Vehicle detection and tracking module
 ├── xcorr_process.py             # Cross-correlation computation module
@@ -44,8 +43,7 @@ DAS-VTX/
 ├── Tracker_class.py             # Class for vehicle tracking
 ├── VSG_class.py                 # Class for virtual shot gather handling
 │
-├── tvar_dispersion.py           # Time–variable dispersion analysis
-├── temp_xcorr.py                # Temporary / test script for correlation
+├── temp_xcorr.py                # Scripts for correlation
 │
 ├── out_test/                    # Example output directory
 ├── test.log                     # Example log file generated during run

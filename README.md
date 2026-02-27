@@ -51,6 +51,10 @@ DAS-VTX/
 
 ## **Running the Code**
 
+### 0. Configure the workflow
+
+Setup a folder containing all DAS-VTX scripts. Addapt the import function in the helper * `func_data_imports.py` depending on interrogation-unit version and source files.
+
 ### 1. Configure the Run
 
 Edit one of the configuration files:

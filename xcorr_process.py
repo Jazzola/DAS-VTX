@@ -21,8 +21,8 @@ def xcorr_process(section, start_date, end_date):
     start_ch, pivot_ch, end_ch = section
 
     if not os.path.exists(PROCESSED_DIR / 'VSGs'):
-            os.mkdir(PROCESSED_DIR / 'VSGs')
-            os.mkdir(PROCESSED_DIR / 'VSGs' / 'Individuals')
+        os.mkdir(PROCESSED_DIR / 'VSGs')
+        os.mkdir(PROCESSED_DIR / 'VSGs' / 'Individuals')
     
     date_range = generate_date_range(start_date, end_date)
 

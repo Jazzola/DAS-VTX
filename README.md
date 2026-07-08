@@ -124,14 +124,16 @@ All processing steps and execution details are recorded in a timestamped log fil
 
 ## **Dependencies**
 
+Tested with:
 ```text
-numpy
-scipy
-matplotlib
-obspy
-h5py
-pandas
-tqdm
+Python     3.10.9
+numpy      1.26.4
+scipy      1.14.1
+matplotlib 3.5.3
+obspy      1.4.1
+h5py       3.8.0
+pandas     2.2.2
+tqdm       4.66.4
 ```
 
 

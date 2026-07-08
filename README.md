@@ -126,7 +126,7 @@ All processing steps and execution details are recorded in a timestamped log fil
 
 Tested with:
 ```text
-Python     3.10.9
+Python     3.11.9
 numpy      1.26.4
 scipy      1.14.1
 matplotlib 3.5.3

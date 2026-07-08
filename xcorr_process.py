@@ -51,11 +51,8 @@ def xcorr_process(section, start_date, end_date):
                     if not os.path.exists(output_path):
                         os.mkdir(output_path)
     
-
-
     detect_list.sort()
     stack_files_list = []
-        
     for parameters in xcorr_parameters:
         wlen = parameters.get('wlen', 1)
         overlap = parameters.get('overlap', 0.8)
@@ -80,7 +77,6 @@ def xcorr_process(section, start_date, end_date):
             
             if randomize_vsg:#n_vsg_per_stack is None:
                 shuffle(detect_sublist)
-            
             stack = []
             vsg_times = []
             SNR_values = []

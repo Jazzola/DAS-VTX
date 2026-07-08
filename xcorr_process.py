@@ -88,8 +88,8 @@ def xcorr_process(section, start_date, end_date):
             for detect in detect_sublist:
                     
                 sw = np.load(detect, allow_pickle=True).item()
-    
-    
+                from_off = int(sw.veh_state_x[0])
+                to_off = int(sw.veh_state_x[-1])
                 for i in range(sw.data.shape[0]):
                     #Taper for filter
                     sw.data[i, :] = sw.data[i, :]*tukey(sw.data.shape[1],
@@ -147,8 +147,8 @@ def xcorr_process(section, start_date, end_date):
             if not os.path.exists(PROCESSED_DIR / 'VSGs' / 'STACKs'):
                 os.mkdir(PROCESSED_DIR / 'VSGs' / 'STACKs')
             n_subset = str(n_subset).zfill(3)
-            n_vsg = str(n_vsg).zfill(4)
-            out_name = f'Stack_n={n_vsg}_Subset={n_subset}_' + parameters_str
+            n_vsg_str = str(n_vsg).zfill(4)
+            out_name = f'Stack_off={from_off}-{to_off}_n={n_vsg_str}_Subset={n_subset_str}_' + parameters_str
             np.savez(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name, parameters=parameters, SNR=SNR_values, vsg_times=vsg_times, stack=stack, allow_pickle=True)
             stack_files_list.append(str(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name)+'.npz')
             n_subset += 1

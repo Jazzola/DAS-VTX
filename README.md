@@ -6,42 +6,20 @@ DAS-VTX is a Python workflow for retrieving and interpreting surface-wave energy
 2. **trajectory-guided cross-correlation and Virtual Shot Gather (VSG) stacking**; and
 3. **frequency-phase-velocity dispersion imaging and optional aperture-stability masking**.
 
-The cleaned implementation intentionally preserves the numerical workflow of the supplied DAS-VTX code. The refactor primarily improves documentation, validation, error handling, plotting consistency, logging, and removal of abandoned development code.
-
 ## Scientific workflow
 
 ### 1. Tracking and surface-wave window selection
-
 Raw DAS data are temporally decimated for the tracking stage. The configured preprocessing chain can include spatial interpolation, apparent-velocity filtering in the f-k domain, band-pass filtering, Savitzky-Golay smoothing, velocity-aligned spatial averaging, nonlinear amplitude weighting, and spatial oversampling.
-
 Candidate source times are detected from peaks close to the beginning of the tracking section. The trajectories are propagated along the fiber with the existing Kalman-filter formulation and screened using the configured missing-data, average-speed, curve-break, and speed-fluctuation criteria.
-
-For every accepted trajectory, DAS-VTX extracts a raw-data surface-wave window centered in time on the source crossing of the configured pivot. Events are rejected when another tracked source crosses the pivot within the configured temporal spacing or when the requested window extends outside the available data.
+For every accepted trajectory, DAS-VTX extracts a raw-data surface-wave window centered in time on the source crossing of the configured pivot. 
 
 ### 2. Trajectory-guided VSG construction and stacking
-
 Each selected surface-wave window is tapered and can be band-pass filtered and spectrally whitened. DAS-VTX then moves the virtual-source position along the tracked vehicle trajectory and cross-correlates the corresponding time windows with neighboring channels.
-
-The VSG implementation in `VSG_class.py` is the trajectory-guided method used by DAS-VTX. The virtual-source autocorrelation is excluded. Contributions from successive virtual-source positions are accumulated and divided by the number of contributing positions. When `include_other_side = True`, the process is repeated on the opposite side of the tracked trajectory. Earlier prototype correlation routines have been removed so that the module exposes only the reference implementation.
-
-Individual VSGs are recursively stacked. `calculate_SNR()` records a diagnostic SNR after each successful addition to the stack. The current diagnostic compares RMS energy in a 250–1200 m/s apparent-velocity region with energy above 1200 m/s, using positive offsets and positive lags between 0.1 and 1.0 s. It is reported in dB and should be interpreted as a processing diagnostic rather than as an uncertainty estimate.
+The VSG implementation in `VSG_class.py` is the trajectory-guided method used by DAS-VTX. Individual VSGs are recursively stacked. `calculate_SNR()` records a diagnostic SNR after each successful addition to the stack. 
 
 ### 3. Dispersion interpretation
-
-The stacked VSG can first be restricted to forward/backward offsets and causal/acausal lags. Optional coherence enhancement evaluates local semblance over the configured slowness grid. The interpolated coherence field is squared and multiplied by the VSG, preserving the behavior of the reference implementation.
-
-The dispersion image is calculated by transforming the available propagation quadrants to the f-k domain, orienting compatible quadrants consistently, combining their complex spectra, and sampling the result along
-
-```text
-k = f / v
-```
-
-for the configured frequency and phase-velocity grids.
-
-### Aperture-stability masking
-
-When `disp_masking = True`, DAS-VTX recomputes the dispersion image after progressively reducing the maximum retained VSG offset. The masking calculation uses the real part of the combined f-k spectrum; negative values are removed and the remaining energy is accumulated across aperture choices. The normalized accumulation forms an aperture-stability mask: dispersion energy that is repeatedly recovered as the usable aperture changes receives a larger weight.
-
+The stacked VSG can first be restricted to forward/backward offsets and causal/acausal lags. Optional coherence enhancement evaluates local semblance over the configured slowness grid. The interpolated coherence field is squared and multiplied by the VSG, preserving the behavior of the reference implementation. The dispersion image is calculated by transforming the available propagation quadrants to the f-k domain, and sampling the result along k = f / v for the configured frequency and phase-velocity grids.
+When `disp_masking = True`, DAS-VTX recomputes the dispersion image after progressively reducing the maximum retained VSG offset. The normalized accumulation forms an aperture-stability mask: dispersion energy that is repeatedly recovered as the usable aperture changes receives a larger weight.
 The final full-aperture dispersion image is retained, and the mask and masked dispersion image are saved separately.
 
 ## Repository structure
@@ -73,12 +51,10 @@ DAS-VTX/
 ## Configuration
 
 The supplied repository contains two experiment-specific configurations:
-
 - `config_cars.py` for road-vehicle data;
 - `config_trains.py` for railway data.
 
-`main.py` keeps the original `config.py` compatibility mechanism: before the processing modules are imported, the selected configuration file is copied to `config.py`.
-
+In `main.py`, before the processing modules are imported, the selected configuration file is copied to `config.py`.
 The default is the train configuration. Select another configuration without editing the source by setting `DAS_VTX_CONFIG`:
 
 ```bash
@@ -137,7 +113,7 @@ For a dispersion object:
 
 ## Input adaptation
 
-`func_data_imports.py` is intentionally isolated from the rest of the workflow. The supplied implementation uses `febus_optics_lib.reader.H5ReaderDas` and reads the first available DAS zone. For another interrogator or file convention, adapt this module while preserving the returned interface:
+`func_data_imports.py` is intentionally isolated from the rest of the workflow. The supplied implementation uses Febus Optics A1R output files. For another interrogator or file convention, adapt this module while preserving the returned interface:
 
 ```python
 strain_rate, distance, time, data_attributes = data_matrix_import(...)
@@ -186,30 +162,13 @@ Every dispersion archive contains:
 - `freqs` and `vels`;
 - `vsg_times`.
 
-When aperture masking is enabled, it additionally contains:
-
-- `mask`: normalized aperture-stability mask;
-- `masked_disp`: element-wise product of `disp` and `mask`.
-
 ## Running DAS-VTX
 
 1. Place the Python files in one directory.
 2. Adapt the input/output paths in the chosen configuration.
-3. Adapt `func_data_imports.py` if the raw DAS format differs from the supplied Febus reader.
+3. Adapt `func_data_imports.py` if the raw DAS format differs.
 4. Enable the desired workflow stages in the configuration.
-5. Run:
-
-```bash
-python3 main.py
-```
-
-or:
-
-```bash
-./launch_main.sh
-```
-
-The shell launcher executes from its own directory and saves stdout/stderr to timestamped files.
+5. Run
 
 ## Dependencies
 
@@ -226,10 +185,3 @@ pandas     2.2.2
 tqdm       4.66.4
 ```
 
-The supplied raw-data reader also requires the deployment-specific `febus_optics_lib` package. `scikit-image` is required by the current f-k apodization helper.
-
-## Reproducibility and preserved implementation choices
-
-Several behaviors that might otherwise invite refactoring were intentionally retained because they are part of the supplied implementation or affect numerical results. Examples include the squared coherence weight, the current trajectory/Kalman state conventions, the existing preprocessing order, the aperture-reduction sequence, and the optional randomized VSG order.
-
-See `CHANGELOG_CLEANUP.md` for the exact distinction between documentation/robustness fixes and scientific choices that were deliberately left unchanged.

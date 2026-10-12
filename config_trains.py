@@ -1,4 +1,9 @@
+"""DAS-VTX train processing configuration
+
+"""
+
 from pathlib import Path
+
 import numpy as np
 
 # ============================================================
@@ -24,7 +29,7 @@ tracking_sections = [(15200, 15550, 15900)]
 
 # Time span over which train passages are processed
 tracking_start_date = '20250401'
-tracking_end_date   = '20250630'
+tracking_end_date = '20250630'
 
 # Daily UTC time window to restrict processing to periods
 # with significant train traffic
@@ -39,18 +44,19 @@ tracking_data_decimation_factor = 1
 # ============================================================
 #              CROSS-CORRELATION (if RUN_XCORR)
 # ============================================================
-# Defines the spatial section used to compute cross-correlations
-# for VSG retrieval.
-xcorr_sections = [(9400, 9775, 10150)]
+# Defines the spatial interval used to compute cross-correlations
+# for VSG retrieval. Each tuple contains (start, end) offsets [m].
+xcorr_sections = [(9400, 10150)]
 
 # Time span over which possible detections are processed
 xcorr_start_date = '20230404'
-xcorr_end_date   = '20230404'
+xcorr_end_date = '20230404'
 
 # VSG stacking options
 randomize_vsg = True         # Randomize VSG selection to avoid bias
 n_vsg_per_stack = None       # Fixed stack size (None = use all available)
-stack_files_list = None      # Optional: use precomputed stack files (to run correlation alone)
+# Optional precomputed stack file(s) or directory for interpretation-only runs
+stack_files_list = None
 
 
 # ============================================================
@@ -63,10 +69,10 @@ dx = 9.6  # Inter-channel spacing [m], used to convert channel index to offset
 #                       PATHS AND I/O
 # ============================================================
 # Input DAS data directories
-datapath = '//' #str: path to the input DAS data files
+datapath = '//'  # Directory containing raw DAS files grouped by date
 # Output directory path
-decimateddatapath = ('//DECIMATE') #str: path to the files created from the raw DAS datasets after decimation
-PROCESSED_DIR = Path('//RESULTS/outputs') #str: path where are stored the outputs of the script
+decimateddatapath = '//DECIMATE'  # Tracking-decimated DAS chunks
+PROCESSED_DIR = Path('//RESULTS/outputs')  # DAS-VTX output root
  
 
 # ============================================================
@@ -81,10 +87,10 @@ DECIM_FILE_FORMAT = '%Y%m%d_%H%M%S.npz'
 # ============================================================
 #            PREPROCESSING PRIOR TO TRACKING
 # ============================================================
-# This preprocessing enhances coherent surface-wave energy
-# while suppressing incoherent noise before detection and tracking.
+# Preprocessing is tuned to increase the continuity of moving-source
+# signatures before peak detection and trajectory tracking.
 default_preprocessing_dict = {
-    'smoothing': (21, 15),        # (time, space) smoothing window sizes
+    'smoothing': (21, 15),        # Savitzky-Golay (window length, polynomial order)
     'x_inter': (),                # Optional spatial interpolation (disabled)
     'FK': {},                     # FK-domain filtering (disabled for trains)
     'BP': {
@@ -94,7 +100,7 @@ default_preprocessing_dict = {
     'SQRT': True,                 # Square-root amplitude scaling
     'spatial_av_vel': 70 / 3.6,   # Reference velocity [m/s] for alignment
     'av_win': 5,                  # Spatial averaging window (channels)
-    'oversampling_factor': 5      # Temporal oversampling factor
+    'oversampling_factor': 5      # Spatial oversampling factor used for tracking
 }
 
 preprocessing_dict = default_preprocessing_dict
@@ -124,9 +130,9 @@ nx_init = 3      # Number of detections needed to initialize a track
 # ============================================================
 # Criteria used to reject spurious or non-physical trajectories.
 preselection_dict = {
-    'max_adjacent_nan': 50,               # Max allowed consecutive gaps
+    'max_adjacent_nan': 50,               # Threshold on adjacent NaN pairs (reference criterion)
     'max_total_nan': 0.2,                 # Max fraction of missing data
-    'average_speed': (40/3.6, 100/3.6),   # Accepted speed range [m/s]
+    'average_speed': (40 / 3.6, 100 / 3.6),   # Accepted speed range [m/s]
     'curve_break': (
         5, 1.8, 0.1, 25                   # Parameters for curvature checks
     ),
@@ -140,8 +146,8 @@ preselection_dict = {
 # Definition of the spatio-temporal windows extracted around
 # detected train passages.
 taper = 4                 # Taper length [s] before filtering
-wlen_sw = 200              # Window length [s]
-wlen_sw += taper
+wlen_sw = 200              # Base signal window length [s]
+wlen_sw += taper          # Total extracted length includes the taper margin
 length_sw = 2800           # Spatial aperture [m]
 temporal_spacing = (
     wlen_sw - taper        # Minimum spacing between windows
@@ -154,13 +160,14 @@ temporal_spacing = (
 xcorr_parameters = [{
     'wlen': 5.8,                   # Correlation window length [s]
     'overlap': 0.0,                # Overlap between windows
-    'delta_t': 0.5,                # At a pivot channel, time shift between the correlation window and the estimated trajectory [s]
+    # Time shift from the estimated source passage at each virtual-source position [s]
+    'delta_t': 0.5,
     'time_window_to_xcorr': 6.5,   # Lag window length [s]
     'norm': True,                  # Temporal normalization
     'norm_amp': True               # Amplitude normalization
 }]
 
-include_other_side = True          # Use both sides of the pivot
+include_other_side = True          # Use both sides of the tracked trajectory
 sw_bp_filt = True                  # Band-pass filter SW windows
 sw_whiten = True                   # Spectral whitening
 freq_lo = 0.5                      # Lower SW frequency [Hz]
@@ -172,9 +179,9 @@ freq_hi = 40.0                     # Upper SW frequency [Hz]
 # ============================================================
 # Parameters controlling dispersion imaging and enhancement.
 coherence_enhancing = True         # Apply coherence-based enhancement
-slw_list = np.linspace(1/250, 1/1200, 16)  # Slowness grid [s/m]
-twin = int(500 * 0.1)              # Temporal smoothing window
-xwin = int(100 / dx)               # Spatial smoothing window (channels)
+slw_list = np.linspace(1 / 250, 1 / 1200, 16)  # Slowness grid [s/m]
+twin = int(500 * 0.1)              # Semblance half-window in time samples
+xwin = int(100 / dx)               # Semblance half-window in channels
 decim = 20                         # Decimation for dispersion analysis
 
 # Frequency and velocity grids for dispersion spectra
@@ -182,7 +189,7 @@ freqs = np.linspace(0.7, 25, int((25 - 0.7) * xcorr_parameters[0]['wlen'] * 2))
 vels = np.linspace(2 * dx, 2100, int(xcorr_parameters[0]['wlen'] * 35 * 3))
 
 stack_norm = False                 # Normalize stacked VSGs
-offsets_to_keep = 'both'           # Use causal + acausal offsets
+offsets_to_keep = 'both'           # Keep backward, forward, or both offset sides
 lags_to_keep = 'causal'            # Restrict to causal lags
 
 

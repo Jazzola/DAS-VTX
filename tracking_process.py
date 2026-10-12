@@ -1,76 +1,77 @@
-import os
-import numpy as np
-import matplotlib.pyplot as plt
+"""Moving-source tracking and window extraction
 
-from Tracker_class import Tracker
-from config import dx
-from config import DATE_FORMAT, PROCESSED_DIR, DAS_FILE_FORMAT
-from config import tracking_args
-from config import wlen_sw, length_sw, temporal_spacing
-from utils import get_date_from_file_path
+"""
+
+from __future__ import annotations
 
 import logging
-logger = logging.getLogger('tests_trains')
+
+import numpy as np
+
+from config import (DAS_FILE_FORMAT,
+    DATE_FORMAT,
+    PROCESSED_DIR,
+    dx,
+    length_sw,
+    temporal_spacing,
+    tracking_args,
+    wlen_sw)
+from Tracker_class import Tracker
+from utils import get_date_from_file_path
+
+logger = logging.getLogger(__name__)
 
 
-def tracking_process(DataLoader, section):
+def tracking_process(data_loader, section):
+    """Track vehicles and save isolated surface-wave windows
+
+    Parameters
+    ----------
+    data_loader : DataLoader
+        Loader already configured for the requested date interval.
+    section : tuple[float, float, float]
+        ``(start, pivot, end)`` distances [m] defining the tracking section and
+        the center of the extracted surface-wave aperture.
+    """
     start_ch, pivot_ch, end_ch = section
-    
-    output_name = 'from_offset'+str(start_ch)+'to'+str(end_ch)+'_'
+    output_prefix = f"from_offset{start_ch}to{end_ch}_"
 
-    for k in range(DataLoader.nfiles):
-
+    for _ in range(data_loader.nfiles):
         try:
-            data, distance, t_axis, data_attributes, file_path, decimated_files = DataLoader.get_next_data()
-        except ValueError:
-            #print('File skipped')
-            logger.info('File skipped')
+            (data, distance,  t_axis, data_attributes, file_path, decimated_files) = data_loader.get_next_data()
+        except (ValueError, StopIteration) as exc:
+            logger.warning("Skipping input file: %s", exc)
             continue
-        
-        date = get_date_from_file_path(file_path, DAS_FILE_FORMAT)
-        #print('Processing file: '+ file_path.stem)
-        logger.info('Processing file: '+ file_path.stem)
-        
-        day_str = date.strftime(DATE_FORMAT)
-        if not os.path.exists(PROCESSED_DIR / 'detects' / day_str):
-            os.mkdir(PROCESSED_DIR / 'detects' / day_str)
 
-        detect_list = []
+        date = get_date_from_file_path(file_path, DAS_FILE_FORMAT)
+        logger.info("Processing tracking file: %s", file_path.stem)
+
+        output_dir = PROCESSED_DIR / "detects" / date.strftime(DATE_FORMAT)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        detections = []
         for decimated_file in decimated_files:
-            
             tracker = Tracker(decimated_file, dx)
             tracker.track_cars(start_ch, end_ch, tracking_args, show_plot=False)
-            
-            tracker.select_surface_wave_windows(data, distance, t_axis, pivot_ch,
-                                                wlen_sw=wlen_sw, length_sw=length_sw,
-                                                temporal_spacing=temporal_spacing)
-            curt_veh_num = len(tracker.sw_selector)
-            #print('Detections: ', len(tracker.sw_selector))
-            logger.info(f'Detections: {len(tracker.sw_selector)}')
-            if curt_veh_num == 0:
-                continue
+            tracker.select_surface_wave_windows(data,distance,  t_axis,
+                pivot_ch,
+                wlen_sw=wlen_sw,
+                length_sw=length_sw,
+                temporal_spacing=temporal_spacing)
 
-            
-            for sw in tracker.sw_selector:
-                #sw.save_fig()
-                #plt.show()
-                detect_list.append(sw)
-            #faudra modifier les plots pour avoir les values dans la config
+            n_detections = len(tracker.sw_selector)
+            logger.info("Isolated detections: %d", n_detections)
+            if n_detections:
+                detections.extend(tracker.sw_selector)
 
-            
-        if detect_list:
-            if not os.path.exists(PROCESSED_DIR / 'detects' / day_str/ file_path.stem):
-                os.mkdir(PROCESSED_DIR / 'detects' / day_str/ file_path.stem)
-                
-            for current_detect in detect_list:
-                detect_name = output_name + 't_'+str(round(current_detect.t_axis[0]))
-                np.save(PROCESSED_DIR / 'detects' / day_str/ file_path.stem/ detect_name,
-                        current_detect,
-                        allow_pickle=True)
+        if detections:
+            file_output_dir = output_dir / file_path.stem
+            file_output_dir.mkdir(parents=True, exist_ok=True)
+            for detection in detections:
+                detection_name = f"{output_prefix}t_{round(detection.t_axis[0])}"
+                np.save(file_output_dir / detection_name, detection, allow_pickle=True)
         else:
-            #print('No detections for the hour')
-            logger.info('No detections for the hour')
+            logger.info("No isolated detections for %s", file_path.name)
 
-        del data, distance, t_axis, data_attributes, file_path, decimated_files, tracker, detect_list
-
-    
+        # Large raw arrays are intentionally released between hourly files.
+        del data, distance, t_axis, data_attributes, decimated_files, detections

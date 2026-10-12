@@ -1,153 +1,198 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.signal import butter, sosfiltfilt
-from scipy.signal.windows import tukey
-import os
+"""Cross-correlation and Virtual Shot Gather (VSG) stacking workflow
+
+This module converts isolated moving-source surface-wave windows into virtual
+shot gathers, stacks the gathers over a configurable date interval, and records
+the evolution of a diagnostic SNR estimate as the stack grows.
+"""
+
+from __future__ import annotations
+
 import copy
+import logging
+import os
+from datetime import timedelta
+from pathlib import Path
 from random import shuffle
 
-from VSG_class import VirtualShotGather
-from config import PROCESSED_DIR
-from config import xcorr_start_date, xcorr_end_date, xcorr_sections, n_vsg_per_stack, randomize_vsg
-from config import freq_lo, freq_hi, wlen_sw, taper, sw_bp_filt, sw_whiten
-from config import xcorr_parameters, include_other_side
-from utils import whiten_signals, calculate_SNR, generate_date_range, get_file_section
+import numpy as np
+from scipy.signal import butter, sosfiltfilt
+from scipy.signal.windows import tukey
 
+from config import (
+    DAS_FILE_FORMAT,
+    DATE_TIME_FORMAT,
+    PROCESSED_DIR,
+    freq_hi,
+    freq_lo,
+    include_other_side,
+    n_vsg_per_stack,
+    randomize_vsg,
+    sw_bp_filt,
+    sw_whiten,
+    taper,
+    wlen_sw,
+    xcorr_parameters,
+)
+from utils import (
+    calculate_SNR,
+    generate_date_range,
+    get_date_from_file_path,
+    get_file_section,
+    whiten_signals,
+)
+from VSG_class import VirtualShotGather
+
+logger = logging.getLogger(__name__)
 
 
 def xcorr_process(section, start_date, end_date):
-    
-    stack_list = []
-    start_ch, pivot_ch, end_ch = section
+    """Build and stack VSGs for one fiber section and date interval
 
-    if not os.path.exists(PROCESSED_DIR / 'VSGs'):
-        os.mkdir(PROCESSED_DIR / 'VSGs')
-        os.mkdir(PROCESSED_DIR / 'VSGs' / 'Individuals')
-    
-    date_range = generate_date_range(start_date, end_date)
+    Parameters
+    ----------
+    section : tuple[float, float, float]
+        (start, pivot, end) distances [m] used for virtual-shot retrieval
+    start_date, end_date : str
+        Inclusive processing dates formatted according to DATE_FORMAT
 
-    dayly_dir_list = []
-    for date in date_range:
-        if os.path.exists(PROCESSED_DIR/'detects' / date):
-            dayly_dir_list.append(PROCESSED_DIR/'detects' / date)
+    Returns
+    -------
+    list[str]
+        Paths to the stacked VSG archives created by this call.
+
+    Notes
+    -----
+    The implementation deliberately preserves the original workflow: each
+    detected surface-wave window is tapered, optionally band-pass filtered and
+    whitened, converted to a VSG, and recursively added to the current stack.
+    SNR is evaluated after every successful addition.
+    """
+    start_ch, end_ch = section
+    stacks_dir = PROCESSED_DIR / "VSGs" / "STACKs"
+    stacks_dir.mkdir(parents=True, exist_ok=True)
+
+    daily_dirs = []
+    for date in generate_date_range(start_date, end_date):
+        day_dir = PROCESSED_DIR / "detects" / date
+        if day_dir.exists():
+            daily_dirs.append(day_dir)
         else:
-            print('No detections on:', date)
-    dayly_dir_list.sort()
+            logger.info("No detections found for %s", date)
+    daily_dirs.sort()
 
-    detect_list = []
-    for output_day in dayly_dir_list:
-        
-        if not os.path.exists(PROCESSED_DIR / 'VSGs' / 'Individuals' / output_day.name):
-            os.mkdir(PROCESSED_DIR / 'VSGs' / 'Individuals' / output_day.name)
-                
+    detection_files = []
+    for output_day in daily_dirs:
         for detection_hour in os.scandir(output_day):
-            for detect in os.scandir(detection_hour.path):
+            if not detection_hour.is_dir():
+                continue
+            for detection in os.scandir(detection_hour.path):
+                if not detection.is_file():
+                    continue
+                file_section = get_file_section(detection)
+                if start_ch >= file_section[0] and end_ch <= file_section[1]:
+                    detection_files.append(detection.path)
 
-                file_section = get_file_section(detect)
-                if start_ch>= file_section[0] and end_ch <= file_section[1]:
-                    detect_list.append(detect.path)
+    detection_files.sort()
+    if not detection_files:
+        logger.warning(
+            "No compatible detections for section %s between %s and %s",
+            section,start_date,end_date)
+        return []
 
-                    output_path = PROCESSED_DIR / 'VSGs' / 'Individuals' / output_day.stem / detection_hour.name
-                    if not os.path.exists(output_path):
-                        os.mkdir(output_path)
-    
-    detect_list.sort()
-    stack_files_list = []
+    stack_files = []
     for parameters in xcorr_parameters:
-        wlen = parameters.get('wlen', 1)
-        overlap = parameters.get('overlap', 0.8)
-        delta_t = parameters.get('delta_t', 0.5)
-        time_window_to_xcorr = parameters.get('time_window_to_xcorr', 5)
-        norm = parameters.get('norm', True)
-        norm_amp = parameters.get('norm_amp', True)
-        #Nom associé aux paramètres
-        parameters_str = f'st:{start_date}-end:{end_date}_o={overlap};dt={delta_t};w={wlen};twin={time_window_to_xcorr}'
+        wlen = parameters.get("wlen", 1)
+        overlap = parameters.get("overlap", 0.8)
+        delta_t = parameters.get("delta_t", 0.5)
+        time_window_to_xcorr = parameters.get("time_window_to_xcorr", 5)
+        norm = parameters.get("norm", True)
+        norm_amp = parameters.get("norm_amp", True)
 
-        # chunking a list of detects into sub-lists of fixed length
+        parameter_tag = ( f"st:{start_date}-end:{end_date}_o={overlap};dt={delta_t};"
+            f"w={wlen};twin={time_window_to_xcorr}")
+
+        # Chunking is intentionally performed before optional randomization to
+        # preserve the original stacking behavior.
         if n_vsg_per_stack is None:
-            detect_lists = [detect_list]
+            detection_subsets = [list(detection_files)]
         else:
-            detect_lists = [
-                detect_list[i : i + n_vsg_per_stack]
-                for i in range(0, len(detect_list), n_vsg_per_stack)
-            ]
+            if n_vsg_per_stack <= 0:
+                raise ValueError("n_vsg_per_stack must be a positive integer or None")
+            detection_subsets = [
+                list(detection_files[i : i + n_vsg_per_stack])
+                for i in range(0, len(detection_files), n_vsg_per_stack)]
 
-        n_subset = 0
-        for detect_sublist in detect_lists:
-            
-            if randomize_vsg:#n_vsg_per_stack is None:
-                shuffle(detect_sublist)
-            stack = []
+        for subset_index, detection_subset in enumerate(detection_subsets):
+            if randomize_vsg:
+                shuffle(detection_subset)
+
+            stack = None
             vsg_times = []
-            SNR_values = []
-            n_vsg = 0
-            for detect in detect_sublist:
-                    
-                sw = np.load(detect, allow_pickle=True).item()
-                from_off = int(sw.veh_state_x[0])
-                to_off = int(sw.veh_state_x[-1])
-                for i in range(sw.data.shape[0]):
-                    #Taper for filter
-                    sw.data[i, :] = sw.data[i, :]*tukey(sw.data.shape[1],
-                                                        taper/wlen_sw)
-                    
-                dt = sw.t_axis[1]-sw.t_axis[0]
+            snr_values = []
+            from_off = None
+            to_off = None
+
+            for detection_file in detection_subset:
+                surface_wave = np.load(detection_file, allow_pickle=True).item()
+                from_off = int(surface_wave.veh_state_x[0])
+                to_off = int(surface_wave.veh_state_x[-1])
+
+                taper_window = tukey(surface_wave.data.shape[1], taper / wlen_sw)
+                surface_wave.data *= taper_window[np.newaxis, :]
+
+                dt = surface_wave.t_axis[1] - surface_wave.t_axis[0]
+                data_filt = surface_wave.data
                 if sw_bp_filt:
-                    sos = butter(5, [freq_lo, freq_hi], btype='bandpass', output='sos', fs=1/dt)
-                    data_filt = sosfiltfilt(sos, sw.data)
-                
+                    sos = butter( 5, [freq_lo, freq_hi], btype="bandpass", output="sos",
+                        fs=1 / dt,)
+                    data_filt = sosfiltfilt(sos, data_filt, axis=-1)
+
                 if sw_whiten:
-                    data_filt = whiten_signals(data_filt, freq_lo, freq_hi, fs=1/dt)
-                else:
-                    data_filt = sw.data
-                
-                sw_filt = copy.deepcopy(sw)
-                sw_filt.data = data_filt
-    
+                    data_filt = whiten_signals(data_filt, freq_lo, freq_hi, fs=1 / dt)
+
+                filtered_surface_wave = copy.deepcopy(surface_wave)
+                filtered_surface_wave.data = data_filt
+
                 try:
-                    vsg=VirtualShotGather(sw_filt, start_x=start_ch,
-                                            end_x=end_ch, pivot=pivot_ch,
-                                            wlen=wlen, overlap=overlap, delta_t=delta_t,
-                                            time_window_to_xcorr=time_window_to_xcorr,
-                                            norm=norm, norm_amp=norm_amp,
-                                            include_other_side=include_other_side,
-                                            new_xcorr=True) #le rajouter dans config ?
-                except ValueError:
-                    print('SW skipped, VSG calculation error') #ajouter des détails?
+                    vsg = VirtualShotGather( filtered_surface_wave,start_x=start_ch,end_x=end_ch,wlen=wlen,
+                        overlap=overlap,delta_t=delta_t,time_window_to_xcorr=time_window_to_xcorr,norm=norm,norm_amp=norm_amp,
+                        include_other_side=include_other_side)
+                except ValueError as exc:
+                    logger.warning("Skipping %s: VSG calculation failed (%s)",
+                        detection_file,
+                        exc)
                     continue
-    
+
                 if np.isnan(vsg.XCF_out).any():
-                    print('SW skipped, NaNs in VSG, SW window boundary issue ??') #ajouter des détails?
+                    logger.warning("Skipping %s: NaNs in VSG (likely a window-boundary issue)",
+                        detection_file )
                     continue
-                
-                #Est ce qu'on enregistre les individuals ???????????
-                # si on ne le fait pas ce n'est pas la peine de créer le repertoire
-                
-                if not stack:
-                    stack.append(vsg)
-                else:
-                    stack[0]+=vsg
-    
-                SNR = calculate_SNR(stack[0])
-                SNR_values.append(SNR)
 
-                detect_time = get_date_from_file_path(Path(detect).parent, DAS_FILE_FORMAT.split('.h5')[0])
-                detect_time += timedelta(seconds=int(detect.split('t_')[-1][:-4]))
-                detect_time = detect_time.strftime(DATE_TIME_FORMAT)
-                vsg_times.append(detect_time)
-                
-                n_vsg += 1
-                
-            # Proceed to next list of detects
-            stack = stack[0]                    
-            if not os.path.exists(PROCESSED_DIR / 'VSGs' / 'STACKs'):
-                os.mkdir(PROCESSED_DIR / 'VSGs' / 'STACKs')
-            n_subset = str(n_subset).zfill(3)
-            n_vsg_str = str(n_vsg).zfill(4)
-            out_name = f'Stack_off={from_off}-{to_off}_n={n_vsg_str}_Subset={n_subset_str}_' + parameters_str
-            np.savez(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name, parameters=parameters, SNR=SNR_values, vsg_times=vsg_times, stack=stack, allow_pickle=True)
-            stack_files_list.append(str(PROCESSED_DIR / 'VSGs' / 'STACKs' / out_name)+'.npz')
-            n_subset += 1
+                stack = vsg if stack is None else stack + vsg
+                snr_values.append(calculate_SNR(stack))
 
+                detection_path = Path(detection_file)
+                detection_time = get_date_from_file_path(detection_path.parent,
+                    DAS_FILE_FORMAT.removesuffix(".h5"))
+                detection_time += timedelta(seconds=int(detection_path.stem.split("t_")[-1]))
+                vsg_times.append(detection_time.strftime(DATE_TIME_FORMAT))
 
-    return stack_files_list
+            if stack is None:
+                logger.warning("No valid VSGs in subset %d; nothing saved", subset_index)
+                continue
+
+            n_vsg = len(vsg_times)
+            subset_str = f"{subset_index:03d}"
+            n_vsg_str = f"{n_vsg:04d}"
+            output_name = ( f"Stack_off={from_off}-{to_off}_n={n_vsg_str}_"
+                f"Subset={subset_str}_{parameter_tag}")
+            output_path = stacks_dir / output_name
+            np.savez(output_path,
+                parameters=parameters,
+                SNR=snr_values,
+                vsg_times=vsg_times,
+                stack=stack)
+            stack_files.append(str(output_path) + ".npz")
+            logger.info("Saved VSG stack: %s.npz", output_path)
+
+    return stack_files

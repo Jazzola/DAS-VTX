@@ -94,16 +94,14 @@ def data_matrix_import(filepath, spatial_sampling=9.6, starttime=None, endtime=N
     distance = np.asarray(concat_results[first_zone]["distance_vect"])
     dt = instance.param_dict[first_zone]["derivation_time"] / 1000.0
 
-    data_attributes = [
-        instance.param_dict[first_zone]["spacing"][1],
+    data_attributes = [instance.param_dict[first_zone]["spacing"][1],
         instance.param_dict[first_zone]["spacing"][0],
         instance.param_dict[first_zone]["gauge_length"],
         instance.param_dict[first_zone]["derivation_time"],
         instance.param_dict[first_zone]["pulse_width"],
         instance.param_dict[first_zone]["sampling_res"],
         instance.param_dict[first_zone]["pulse_rate_freq"],
-        UTCDateTime(concat_results[first_zone]["time_vect"][0]),
-    ]
+        UTCDateTime(concat_results[first_zone]["time_vect"][0])]
 
     time = np.arange(strain_rate.shape[1]) * dt
     logger.debug("H5 data attributes: %s", data_attributes)

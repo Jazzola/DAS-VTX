@@ -9,17 +9,14 @@ DAS-VTX is a Python workflow for retrieving and interpreting surface-wave energy
 ## Scientific workflow
 
 ### 1. Tracking and surface-wave window selection
-Raw DAS data are temporally decimated for the tracking stage. The configured preprocessing chain can include spatial interpolation, apparent-velocity filtering in the f-k domain, band-pass filtering, Savitzky-Golay smoothing, velocity-aligned spatial averaging, nonlinear amplitude weighting, and spatial oversampling.
-Candidate source times are detected from peaks close to the beginning of the tracking section. The trajectories are propagated along the fiber with the existing Kalman-filter formulation and screened using the configured missing-data, average-speed, curve-break, and speed-fluctuation criteria.
-For every accepted trajectory, DAS-VTX extracts a raw-data surface-wave window centered in time on the source crossing of the configured pivot. 
+Candidate source times are detected from peaks close to the beginning of the tracking section. The trajectories are propagated along the fiber with a Kalman-filter formulation and screened using the configured missing-data, average-speed, curve-break, and speed-fluctuation criteria.For every accepted trajectory, DAS-VTX extracts a raw-data surface-wave window centered in time on the source crossing of the configured pivot. 
 
 ### 2. Trajectory-guided VSG construction and stacking
 Each selected surface-wave window is tapered and can be band-pass filtered and spectrally whitened. DAS-VTX then moves the virtual-source position along the tracked vehicle trajectory and cross-correlates the corresponding time windows with neighboring channels.
-The VSG implementation in `VSG_class.py` is the trajectory-guided method used by DAS-VTX. Individual VSGs are recursively stacked. `calculate_SNR()` records a diagnostic SNR after each successful addition to the stack. 
+Individual VSGs are recursively stacked.
 
 ### 3. Dispersion interpretation
-The stacked VSG can first be restricted to forward/backward offsets and causal/acausal lags. Optional coherence enhancement evaluates local semblance over the configured slowness grid. The interpolated coherence field is squared and multiplied by the VSG, preserving the behavior of the reference implementation. The dispersion image is calculated by transforming the available propagation quadrants to the f-k domain, and sampling the result along k = f / v for the configured frequency and phase-velocity grids.
-When `disp_masking = True`, DAS-VTX recomputes the dispersion image after progressively reducing the maximum retained VSG offset. The normalized accumulation forms an aperture-stability mask: dispersion energy that is repeatedly recovered as the usable aperture changes receives a larger weight.
+The stacked VSG can undergo coherence enhancement, whereby local semblance is evaluated over the configured slowness grid and then applied as a weighting mask. The dispersion image is calculated by transforming the available propagation quadrants to the f-k domain, and sampling the result along k = f / v. An additional masking step can be activated. When `disp_masking = True`, DAS-VTX recomputes the dispersion image after progressively reducing the maximum retained VSG offset. The normalized accumulation forms an aperture-stability mask: dispersion energy that is repeatedly recovered as the usable aperture changes receives a larger weight.
 The final full-aperture dispersion image is retained, and the mask and masked dispersion image are saved separately.
 
 ## Repository structure

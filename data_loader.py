@@ -1,5 +1,5 @@
 """Data discovery and loading utilities for DAS-VTX tracking
-The :class:`DataLoader` scans the configured raw DAS archive, reuses existing
+The class DataLoader scans the configured raw DAS archive, reuses existing
 tracking-decimated files when available, and creates them on demand otherwise.
 Raw data are still loaded for surface-wave window extraction; decimated files
 are used only by the tracking stage
@@ -12,15 +12,13 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from config import (
-    DAS_FILE_FORMAT,
+from config import ( DAS_FILE_FORMAT,
     DATE_FORMAT,
     DECIM_FILE_FORMAT,
     datapath,
     decimateddatapath,
     length_sw,
-    tracking_data_decimation_factor,
-)
+    tracking_data_decimation_factor)
 from func_data_imports import data_matrix_import
 from utils import create_npz_data, generate_date_range, get_date_from_file_path
 
@@ -33,7 +31,7 @@ class DataLoader:
     Parameters
     ----------
     section : tuple[float, float, float]
-        Tracking section expressed as ``(start, pivot, end)`` distances along
+        Tracking section expressed as (start, pivot, end) distances along
         the fiber [m]. The pivot is used to center the raw-data aperture loaded
         for surface-wave extraction
     """
@@ -45,26 +43,15 @@ class DataLoader:
         self.file_paths: list[Path] = []
         self.nfiles = 0
 
-    def scan_data(
-        self,
-        start_date: str,
-        end_date: str,
-        start_hour: int,
-        end_hour: int,
-    ) -> None:
+    def scan_data(self,start_date: str,  end_date: str,  start_hour: int, end_hour: int) -> None:
         """Scan raw DAS files over the requested date/hour interval.
 
-        The hour interval follows the convention ``start_hour <= hour <
-        end_hour`` and is interpreted in the time system encoded by
-        ``DAS_FILE_FORMAT`` (UTC for the provided configurations)
+        The hour interval follows the convention start_hour <= hour <
+        end_hour and is interpreted in the time system encoded by
+        DAS_FILE_FORMAT (UTC for the provided configurations)
         """
-        logger.info(
-            "Scanning DAS files from %s to %s between %02d:00 and %02d:00",
-            start_date,
-            end_date,
-            start_hour,
-            end_hour,
-        )
+        logger.info( "Scanning DAS files from %s to %s between %02d:00 and %02d:00",
+            start_date, end_date,  start_hour, end_hour)
 
         self.file_paths = []
         for date in generate_date_range(start_date, end_date):
@@ -100,9 +87,7 @@ class DataLoader:
         decimated_day_dir = self.decimated_data_dir / file_date.strftime(DATE_FORMAT)
         decimated_day_dir.mkdir(parents=True, exist_ok=True)
 
-        corresponding_decimated_files = self._matching_decimated_files(
-            decimated_day_dir, file_date
-        )
+        corresponding_decimated_files = self._matching_decimated_files(  decimated_day_dir, file_date)
         if corresponding_decimated_files:
             logger.info("Using existing decimated tracking data for %s", file_path.name)
         else:
@@ -111,25 +96,14 @@ class DataLoader:
                 file_path,
                 decimated_day_dir,
                 decimation_factor=tracking_data_decimation_factor,
-                return_full=False,
-            )
+                return_full=False)
             corresponding_decimated_files = self._matching_decimated_files(
-                decimated_day_dir, file_date
-            )
+                decimated_day_dir, file_date)
 
-        strain_rate, distance, time, data_attributes = data_matrix_import(
-            file_path,
+        strain_rate, distance, time, data_attributes = data_matrix_import(file_path,
             ch1=self.pivot_channel - length_sw // 2,
-            ch2=self.pivot_channel + length_sw // 2,
-        )
-        return (
-            strain_rate,
-            distance,
-            time,
-            data_attributes,
-            file_path,
-            corresponding_decimated_files,
-        )
+            ch2=self.pivot_channel + length_sw // 2)
+        return (strain_rate, distance,  time, data_attributes, file_path, corresponding_decimated_files)
 
     @staticmethod
     def _matching_decimated_files(directory: Path, file_date):

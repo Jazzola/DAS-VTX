@@ -57,7 +57,7 @@ def map_fv(data, x_axis, t_axis, dx, dt, freqs, vels, norm=False, apodis=False, 
     Parameters
     ----------
     data : numpy.ndarray
-        VSG amplitudes shaped ``(n_offsets, n_lags)``.
+        VSG amplitudes shaped (n_offsets, n_lags)
     x_axis : numpy.ndarray
         Inter-channel offsets [m]. Negative/positive values represent the two
         propagation sides of the virtual source.
@@ -98,21 +98,13 @@ def map_fv(data, x_axis, t_axis, dx, dt, freqs, vels, norm=False, apodis=False, 
 
     spectra = {}
     if forward_prop and acausal:
-        spectra["forward_acausal"] = compute_fk_spectrum(
-            data[x_axis >= 0, :][:, t_axis <= 0], dx, dt, apodis
-        )
+        spectra["forward_acausal"] = compute_fk_spectrum(data[x_axis >= 0, :][:, t_axis <= 0], dx, dt, apodis)
     if forward_prop and causal:
-        spectra["forward_causal"] = compute_fk_spectrum(
-            data[x_axis >= 0, :][:, t_axis >= 0][::-1, :], dx, dt, apodis
-        )
+        spectra["forward_causal"] = compute_fk_spectrum(data[x_axis >= 0, :][:, t_axis >= 0][::-1, :], dx, dt, apodis)
     if backward_prop and acausal:
-        spectra["backward_acausal"] = compute_fk_spectrum(
-            data[x_axis <= 0, :][:, t_axis <= 0][:, ::-1], dx, dt, apodis
-        )
+        spectra["backward_acausal"] = compute_fk_spectrum(data[x_axis <= 0, :][:, t_axis <= 0][:, ::-1], dx, dt, apodis)
     if backward_prop and causal:
-        spectra["backward_causal"] = compute_fk_spectrum(
-            data[x_axis <= 0, :][:, t_axis >= 0], dx, dt, apodis
-        )
+        spectra["backward_causal"] = compute_fk_spectrum( data[x_axis <= 0, :][:, t_axis >= 0], dx, dt, apodis)
 
     if not spectra:
         raise ValueError("VSG does not contain enough samples in any propagation quadrant")
@@ -132,12 +124,10 @@ def map_fv(data, x_axis, t_axis, dx, dt, freqs, vels, norm=False, apodis=False, 
         elif causal and not acausal:
             keys = ["forward_causal", "backward_causal"]
         else:
-            keys = [
-                "forward_acausal",
+            keys = [ "forward_acausal",
                 "forward_causal",
                 "backward_acausal",
-                "backward_causal",
-            ]
+                "backward_causal"]
 
     first_spectrum, fft_f, fft_k = spectra[keys[0]]
     fk_res = first_spectrum.copy()
@@ -145,18 +135,14 @@ def map_fv(data, x_axis, t_axis, dx, dt, freqs, vels, norm=False, apodis=False, 
         fk_res += spectra[key][0]
 
     fk_res = np.abs(fk_res) if mod else np.real(fk_res)
-    interp_fun = RegularGridInterpolator(
-        (fft_k, fft_f), fk_res, bounds_error=False, fill_value=0.0
-    )
+    interp_fun = RegularGridInterpolator( (fft_k, fft_f), fk_res, bounds_error=False, fill_value=0.0)
 
     nscanv = vels.size
     ones_arr = np.ones(nscanv)
     fv_map = np.zeros((freqs.size, vels.size), dtype=np.float32)
     for index, frequency in enumerate(freqs):
         wavenumbers = frequency * ones_arr / vels
-        interpolation_points = np.column_stack(
-            (wavenumbers, np.full(nscanv, frequency))
-        )
+        interpolation_points = np.column_stack( (wavenumbers, np.full(nscanv, frequency)))
         fv_map[index, :] = interp_fun(interpolation_points)
 
     # The 25-sample, fourth-order Savitzky-Golay smoothing is part of the
@@ -190,15 +176,11 @@ def plot_fv_map(fv_map, freqs, vels, norm=True, fig_dir="Fig/", fig_name=None,  
     vmax = np.percentile(finite_values, pclip) if finite_values.size else None
     vmin = np.percentile(finite_values, 100 - pclip) if finite_values.size else None
 
-    ax.imshow(
-        image,
-        aspect="auto",
+    ax.imshow( image, aspect="auto",
         extent=[freqs[0], freqs[-1], vels[0], vels[-1]],
         cmap=kwargs.get("cmap", "jet"),
-        vmax=vmax,
-        vmin=vmin,
-        origin="lower",
-    )
+        vmax=vmax, vmin=vmin,
+        origin="lower",)
     ax.grid(kwargs.get("grid", True))
     ax.set_xscale(kwargs.get("set_xscale", "linear"))
     ax.set_xlabel("Frequency [Hz]", fontsize=fontsize)
@@ -224,20 +206,10 @@ class Dispersion:
     
     """
 
-    def __init__(
-        self,
-        data,
-        x_axis,
-        t_axis,
-        dx,
-        dt,
-        freqs,
-        vels,
-        norm=False,
-        apodis=False,
-        mod=True,
-        compute_fv=True,
-    ):
+    def __init__(self, data, x_axis, t_axis,
+        dx,dt,   freqs, vels,
+        norm=False,  apodis=False, mod=True,   compute_fv=True):
+            
         self.data = data
         self.x_axis = x_axis
         self.t_axis = t_axis
@@ -252,7 +224,7 @@ class Dispersion:
             self._map_fv()
 
     def save_to_npz(self, fname, fdir="./"):
-        """Save the dispersion axes and image to an ``.npz`` archive
+        """Save the dispersion axes and image to an .npz archive
         """
         output = Path(fdir) / fname
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -260,51 +232,30 @@ class Dispersion:
 
     @classmethod
     def get_dispersion_obj(cls, fname, fdir="./"):
-        """Reconstruct a :class:`Dispersion` object from an ``.npz`` archive
+        """Reconstruct a class Dispersion object from an .npz archive
         """
         with np.load(Path(fdir) / fname) as file:
-            obj = cls(
-                data=None,
-                x_axis=None,
-                t_axis=None,
-                dx=None,
-                dt=None,
-                freqs=file["freqs"],
-                vels=file["vels"],
-                compute_fv=False,
-            )
+            obj = cls(data=None, x_axis=None,  t_axis=None,  dx=None, dt=None,
+                freqs=file["freqs"], vels=file["vels"],  compute_fv=False)
             obj.fv_map = file["fv_map"]
         return obj
 
     def _map_fv(self):
         """Compute and store the f-v image from the object's VSG data
         """
-        self.fv_map = map_fv(
-            self.data,
-            self.x_axis,
-            self.t_axis,
-            self.dx,
-            self.dt,
-            freqs=self.freqs,
-            vels=self.vels,
-            norm=self.norm,
-            apodis=self.apodis,
-            mod=self.mod,
-        )
+        self.fv_map = map_fv(self.data,  self.x_axis,  self.t_axis,
+            self.dx,   self.dt,  freqs=self.freqs,
+            vels=self.vels,  norm=self.norm,  apodis=self.apodis,  mod=self.mod)
 
     def plot_image(self, fig_dir=None, fig_name=None, norm=False, **kwargs):
         """Plot the stored dispersion image
         """
         use_norm = norm or self.norm
-        return plot_fv_map(
-            self.fv_map,
-            self.freqs,
-            self.vels,
+        return plot_fv_map( self.fv_map,  self.freqs, self.vels,
             norm=use_norm,
             fig_dir=fig_dir or "Fig/",
             fig_name=fig_name,
-            **kwargs,
-        )
+            **kwargs )
 
     def __add__(self, other):
         """Add two dispersion images on the same grid

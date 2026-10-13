@@ -1,7 +1,7 @@
 """DAS input helpers
 The HDF5 reader is intentionally isolated in this module because acquisition
 formats and interrogation-unit libraries vary between deployments. Adapting
-DAS-VTX to another vendor/file format should therefore primarily require
+DAS-VTX to another file format should therefore require
 changes here rather than in the processing workflow
 """
 
